@@ -1,0 +1,12 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+	<qresource>
+		<file>images/icon-rect.svg</file>
+	</qresource>
+	<qresource>
+		<file>images/icon-edit.svg</file>
+	</qresource>
+	<qresource>
+		<file>images/world-lores.svg</file>
+	</qresource>
+</RCC>

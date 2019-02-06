@@ -1,0 +1,5 @@
+# CLion junk
+.idea/
+
+# QtCreator junk
+CMakeLists.txt.user

@@ -1,0 +1,211 @@
+#ifndef MAP_H
+#define MAP_H
+
+#include <cmath>
+#include <h3/h3api.h>
+#include <QRectF>
+#include <QSizeF>
+
+
+#define NEW new(std::nothrow)
+
+
+#define PI 3.14159265358979323846
+#define NORMALIZE_LON(lon) ( ((lon) + PI)   / (2*PI) )
+#define NORMALIZE_LAT(lat) ( ((lat) - PI/2) / ( -PI) )
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L35
+#ifndef H3_MODE_OFFSET
+#define H3_MODE_OFFSET 59
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L50
+#ifndef H3_MODE_MASK
+#define H3_MODE_MASK 0b0'1111'000'0000'0000000'000000000000000000000000000000000000000000000
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L38
+#ifndef H3_BC_OFFSET
+#define H3_BC_OFFSET 45
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L56
+#ifndef H3_BC_MASK
+#define H3_BC_MASK 0b0'0000'000'0000'1111111'000000000000000000000000000000000000000000000
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/constants.h#L79
+#ifndef H3_HEXAGON_MODE
+#define H3_HEXAGON_MODE 1
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L90
+#ifndef H3_SET_MODE
+#define H3_SET_MODE(i, m) ( ((i) & (~H3_MODE_MASK)) | (((uint64_t)(m)) << H3_MODE_OFFSET) )
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L101
+#ifndef H3_SET_BASE_CELL
+#define H3_SET_BASE_CELL(i, c) ( ((i) & (~H3_BC_MASK)) | (((uint64_t)(c)) << H3_BC_OFFSET) )
+#endif
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L80
+#ifndef H3_INIT // H3 index with mode 0, res 0, base cell 0, and 7 for all index digits
+#define H3_INIT 0b0'0000'000'0000'0000000'111111111111111111111111111111111111111111111
+#endif
+
+#ifndef H3_INVALID_INDEX
+#define H3_INVALID_INDEX 0
+#endif
+
+// https://uber.github.io/h3/#/documentation/core-library/resolution-table
+#ifndef MAX_SUPPORTED_RESOLUTION
+#define MAX_SUPPORTED_RESOLUTION 6
+#endif
+
+
+#define IS_VALID_RESOLUTION(r) ( 0 <= (r) && (r) <= MAX_SUPPORTED_RESOLUTION )
+
+
+constexpr double DOUBLE_MAX = std::numeric_limits<double>::max();
+
+
+
+struct CellData
+{
+	double water;
+	double ice;
+	double sediment;
+};
+
+
+struct H3State
+{
+	int                         resolution;
+	std::map<H3Index, CellData> cellsData;
+	H3Index                     activeIndex;
+};
+
+
+// https://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
+inline
+int pow(int base, int8_t exp)
+{
+	int result = 1;
+	for(;;)
+	{
+		if(exp & 1)
+			result *= base;
+		exp = ((uint8_t)exp) >> 1;
+		if(!exp)
+			break;
+		base *= base;
+	}
+	return result;
+}
+
+
+inline
+qreal getLineThickness(int resolution)
+{
+	assert(IS_VALID_RESOLUTION(resolution));
+	qreal result = std::pow(2, -resolution);
+	return result;
+}
+
+
+inline
+GeoCoord toGeocoord(QPointF ssPoint, QSizeF surfaceSize)
+{
+	GeoCoord result;
+	result.lon = (ssPoint.x() / surfaceSize.width())  * (2*PI) - (PI  );
+	result.lat = (ssPoint.y() / surfaceSize.height()) * ( -PI) + (PI/2);
+	return result;
+}
+
+
+inline
+void toGeocoord(QRectF ssArea, QSizeF sceneSize, GeoCoord* vertices)
+{
+	vertices[0] = toGeocoord(ssArea.topLeft(),     sceneSize);
+	vertices[1] = toGeocoord(ssArea.bottomLeft(),  sceneSize);
+	vertices[2] = toGeocoord(ssArea.bottomRight(), sceneSize);
+	vertices[3] = toGeocoord(ssArea.topRight(),    sceneSize);
+}
+
+
+inline
+QPointF toSurfaceSpace(GeoCoord coord, QSizeF surfaceSize)
+{
+	QPointF ssPoint = {
+		NORMALIZE_LON(coord.lon) * surfaceSize.width(),
+		NORMALIZE_LAT(coord.lat) * surfaceSize.height()
+	};
+	return ssPoint;
+}
+
+
+// https://uber.github.io/h3/#/documentation/core-library/resolution-table
+inline
+uint64_t h3GetIndexCount(int resolution)
+{
+	static constexpr uint64_t INDEX_COUNT_PER_RES[MAX_SUPPORTED_RESOLUTION+1] = {
+		       122,
+		       842,
+		     5'882,
+		    41'162,
+		   288'122,
+		 2'016'842,
+		14'117'882,
+	};
+	if(IS_VALID_RESOLUTION(resolution))
+		return INDEX_COUNT_PER_RES[resolution];
+	return 0;
+}
+
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/lib/baseCells.c#L904
+inline
+H3Index h3GetIndexRes0(int baseCellIndex)
+{
+	assert(0 <= baseCellIndex && baseCellIndex <= 121);
+	H3Index h3Index = H3_INIT;
+	h3Index = H3_SET_MODE(h3Index, H3_HEXAGON_MODE);
+	h3Index = H3_SET_BASE_CELL(h3Index, baseCellIndex);
+	return h3Index;
+}
+
+
+// https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/lib/h3Index.c#L159
+inline
+uint64_t h3MaxChildrenCount(int parentRes, int childRes)
+{
+	assert(IS_VALID_RESOLUTION(parentRes));
+	assert(IS_VALID_RESOLUTION(childRes));
+	assert(IS_VALID_RESOLUTION(parentRes - childRes));
+	return pow(7, (int8_t)(childRes - parentRes));
+}
+
+
+inline
+bool edgeCrossesAntimeridian(double a_lon, double b_lon)
+{
+	if(std::abs(a_lon - b_lon) > PI)
+		return true;
+	return false;
+}
+
+
+inline
+bool polyCrossesAntimeridian(GeoBoundary* boundary)
+{
+	// Polygon crosses antimeridian if any pair of points have latitudes
+	// of opposite sign and they are more than half a globe away
+	for(int i = 1; i < boundary->numVerts; ++i)
+		if(std::abs(boundary->verts[0].lon - boundary->verts[i].lon) > PI)
+			return true;
+	return false;
+}
+
+
+#endif // MAP_H
