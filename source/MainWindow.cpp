@@ -598,39 +598,39 @@ int importFile(const char* filePath, int* resolution, std::map<H3Index, CellData
 	if(!stream.is_open())
 		return 1;
 	
-	std::shared_ptr<cpptoml::table> root;
 	try
 	{
 		cpptoml::parser parser(stream);
-		root = parser.parse();
+		std::shared_ptr<cpptoml::table> root = parser.parse();
+		std::shared_ptr<cpptoml::table> h3 = root->get_table("h3");
+		
+		*resolution = h3->get_as<int>("resolution").value_or(0);
+		for(auto& it : *h3->get_table("values"))
+		{
+			// TODO: Settle on a single TOML format
+			CellData cell = {.water = DOUBLE_NAN, .ice = DOUBLE_NAN, .sediment = DOUBLE_NAN };
+			if(it.second->is_array())
+			{
+				std::vector<std::shared_ptr<cpptoml::value<double>>> values = it.second->as_array()->array_of<double>();
+				if(values.size() > 0)
+					cell.water    = values[0]->get();
+				if(values.size() > 1)
+					cell.ice      = values[1]->get();
+				if(values.size() > 2)
+					cell.sediment = values[2]->get();
+			}
+			else
+			{
+				cell.water = it.second->as<double>()->get();
+			}
+			
+			H3Index index = std::stoull(it.first, nullptr, 16);
+			data->emplace(index, cell);
+		}
 	}
 	catch(cpptoml::parse_exception& ex)
 	{
 		return 2;
-	}
-	
-	*resolution = root->get_as<int>("h3.resolution").value_or(0);
-	for(auto& it : *root->get_table("h3")->get_table("values"))
-	{
-		// TODO: Settle on a single TOML format
-		CellData cell = {.water = DOUBLE_NAN, .ice = DOUBLE_NAN, .sediment = DOUBLE_NAN };
-		if(it.second->is_array())
-		{
-			std::vector<std::shared_ptr<cpptoml::value<double>>> values = it.second->as_array()->array_of<double>();
-			if(values.size() > 0)
-				cell.water    = values[0]->get();
-			if(values.size() > 1)
-				cell.ice      = values[1]->get();
-			if(values.size() > 2)
-				cell.sediment = values[2]->get();
-		}
-		else
-		{
-			cell.water = it.second->as<double>()->get();
-		}
-		
-		H3Index index = std::stoull(it.first, nullptr, 16);
-		data->emplace(index, cell);
 	}
 	return 0;
 }
