@@ -291,7 +291,9 @@ void MainWindow::onActionRectTool()
 	this->mapTool = MapTool::Rect;
 	this->h3State->activeIndex = H3_INVALID_INDEX;
 	
-	QApplication::focusWidget()->clearFocus();
+	if(QApplication::focusWidget())
+		QApplication::focusWidget()->clearFocus();
+	
 	this->editWater->setEnabled(false);
 	this->editIce->setEnabled(false);
 	this->editSediment->setEnabled(false);
