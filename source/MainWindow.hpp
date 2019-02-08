@@ -63,6 +63,7 @@ protected:
 	
 	void setupToolbar();
 	void highlightCell(H3Index index);
+	void clearLineEditsNoSignal();
 	
 private:
 	Ui::MainWindow*   ui;

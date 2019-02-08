@@ -183,9 +183,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 		this->editIce->setEnabled(false);
 		this->editSediment->setEnabled(false);
 		
-		this->editWater->setText("");
-		this->editIce->setText("");
-		this->editSediment->setText("");
+		this->clearLineEditsNoSignal();
 	}
 	else
 	{
@@ -225,9 +223,7 @@ void MainWindow::onActionOpenFile()
 			this->editIce->setEnabled(false);
 			this->editSediment->setEnabled(false);
 			
-			this->editWater->clear();
-			this->editIce->clear();
-			this->editSediment->clear();
+			this->clearLineEditsNoSignal();
 			
 			this->resolutionSpinbox->blockSignals(true);
 			this->resolutionSpinbox->setValue(this->h3State->resolution);
@@ -298,9 +294,7 @@ void MainWindow::onActionRectTool()
 	this->editIce->setEnabled(false);
 	this->editSediment->setEnabled(false);
 	
-	this->editWater->setText("");
-	this->editIce->setText("");
-	this->editSediment->setText("");
+	this->clearLineEditsNoSignal();
 	
 	this->ui->mapView->scene()->invalidate();
 }
@@ -499,19 +493,23 @@ void MainWindow::highlightCell(H3Index index)
 		{
 			QString text;
 			text = std::isnan(it->second.water)    ? "" : QString::number(it->second.water,    'f', DECIMAL_DIGITS);
+			this->editWater->blockSignals(true);
 			this->editWater->setText(text);
+			this->editWater->blockSignals(false);
 			
 			text = std::isnan(it->second.ice)      ? "" : QString::number(it->second.ice,      'f', DECIMAL_DIGITS);
+			this->editIce->blockSignals(true);
 			this->editIce->setText(text);
+			this->editIce->blockSignals(false);
 			
 			text = std::isnan(it->second.sediment) ? "" : QString::number(it->second.sediment, 'f', DECIMAL_DIGITS);
+			this->editSediment->blockSignals(true);
 			this->editSediment->setText(text);
+			this->editSediment->blockSignals(false);
 		}
 		else
 		{
-			this->editWater->clear();
-			this->editIce->clear();
-			this->editSediment->clear();
+			this->clearLineEditsNoSignal();
 		}
 		
 		QLineEdit* focused = dynamic_cast<QLineEdit*>(QApplication::focusWidget());
@@ -591,6 +589,22 @@ bool MainWindow::handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event
 		}
 	}
 	return false;
+}
+
+
+void MainWindow::clearLineEditsNoSignal()
+{
+	this->editWater->blockSignals(true);
+	this->editWater->clear();
+	this->editWater->blockSignals(false);
+	
+	this->editIce->blockSignals(true);
+	this->editIce->clear();
+	this->editIce->blockSignals(false);
+	
+	this->editSediment->blockSignals(true);
+	this->editSediment->clear();
+	this->editSediment->blockSignals(false);
 }
 
 
