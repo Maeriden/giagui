@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 	this->ui->statusBar->addWidget(this->statusLabel);
 	
 	QGraphicsScene* scene = new QGraphicsScene(this);
-	scene->addItem(new QGraphicsSvgItem(":/images/world-lores.svg"));
+	scene->addItem(new QGraphicsSvgItem(":/images/world.svg"));
 	this->ui->mapView->setScene(scene);
 	
 	// IMPORTANT: https://stackoverflow.com/questions/2445997/qgraphicsview-and-eventfilter 

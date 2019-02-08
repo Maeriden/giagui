@@ -7,6 +7,6 @@
 		<file>images/icon-edit.svg</file>
 	</qresource>
 	<qresource>
-		<file>images/world-lores.svg</file>
+		<file>images/world.svg</file>
 	</qresource>
 </RCC>
