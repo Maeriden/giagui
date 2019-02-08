@@ -68,6 +68,7 @@
 
 
 constexpr double DOUBLE_MAX = std::numeric_limits<double>::max();
+constexpr double DOUBLE_NAN = std::numeric_limits<double>::quiet_NaN();
 
 
 
@@ -84,12 +85,27 @@ struct H3State
 	int                         resolution;
 	std::map<H3Index, CellData> cellsData;
 	H3Index                     activeIndex;
+	uint64_t                    polyfillIndicesCount;
+	H3Index*                    polyfillIndices;
 };
+extern H3State globalH3State;
+
+
+inline
+void H3State_reset(H3State* h3State, int resolution)
+{
+	delete[] h3State->polyfillIndices;
+	h3State->resolution = resolution;
+	h3State->cellsData.clear();
+	h3State->activeIndex = H3_INVALID_INDEX;
+	h3State->polyfillIndices = nullptr;
+	h3State->polyfillIndicesCount = 0;
+}
 
 
 // https://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
 inline
-int pow(int base, int8_t exp)
+int powi(int base, int8_t exp)
 {
 	int result = 1;
 	for(;;)
@@ -109,7 +125,7 @@ inline
 qreal getLineThickness(int resolution)
 {
 	assert(IS_VALID_RESOLUTION(resolution));
-	qreal result = std::pow(2, -resolution);
+	qreal result = 0.5f * std::pow(2, -resolution);
 	return result;
 }
 
@@ -183,7 +199,7 @@ uint64_t h3MaxChildrenCount(int parentRes, int childRes)
 	assert(IS_VALID_RESOLUTION(parentRes));
 	assert(IS_VALID_RESOLUTION(childRes));
 	assert(IS_VALID_RESOLUTION(parentRes - childRes));
-	return pow(7, (int8_t)(childRes - parentRes));
+	return powi(7, (int8_t)(childRes - parentRes));
 }
 
 
@@ -205,6 +221,34 @@ bool polyCrossesAntimeridian(GeoBoundary* boundary)
 		if(std::abs(boundary->verts[0].lon - boundary->verts[i].lon) > PI)
 			return true;
 	return false;
+}
+
+
+inline
+uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index** outIndices)
+{
+	GeoCoord geoCorners[4];
+	toGeocoord(ssArea, surfaceSize, geoCorners);
+	
+	GeoPolygon geoPolygon = {};
+	geoPolygon.geofence.numVerts = 4;
+	geoPolygon.geofence.verts = geoCorners;
+	
+	uint64_t indicesLen = maxPolyfillSize(&geoPolygon, resolution);
+	if(indicesLen > 0)
+	{
+		*outIndices = NEW H3Index[indicesLen];
+		if(!*outIndices)
+		{
+			// TODO
+		}
+		polyfill(&geoPolygon, resolution, *outIndices);
+	}
+	else
+	{
+		*outIndices = nullptr;
+	}
+	return indicesLen;
 }
 
 

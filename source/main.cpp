@@ -1,5 +1,8 @@
 #include "MainWindow.hpp"
 #include <QApplication>
+#include "map.hpp"
+
+H3State globalH3State;
 
 // Polyfill issue
 // https://github.com/uber/h3-js/issues/24

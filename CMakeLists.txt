@@ -7,7 +7,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno
 include_directories(source)
 #include_directories(${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen/include)
 
+option(ENABLE_ASSERT "Enable additional assertions" OFF)
+if(ENABLE_ASSERT)
+    add_compile_definitions(ENABLE_ASSERT=1)
+endif()
+
 find_package(h3 REQUIRED)
+
+find_package(cpptoml REQUIRED)
 
 ### Qt stuff ###
 # Find includes in corresponding build directories

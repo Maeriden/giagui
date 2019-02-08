@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <fstream>
 #include <QLabel>
 #include <QMainWindow>
 #include <QLineEdit>
@@ -31,8 +32,9 @@ public:
 	static constexpr int DECIMAL_DIGITS = 6;
 
 public:
-	H3State h3State;
-	MapTool mapTool;
+	H3State* h3State;
+	MapTool  mapTool;
+	QString  exportPath;
 	
 public:
 	explicit MainWindow(QWidget *parent = nullptr);
@@ -40,19 +42,27 @@ public:
 	
 protected:
 	bool eventFilter(QObject* o, QEvent* e) override;
-	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);
-	bool handleMapEventMouseDown(MapView* mapView, QMouseEvent* event);
 	
 	void keyPressEvent(QKeyEvent *event) override;
 	
-	void onActionTriggeredRectTool();
-	void onActionTriggeredEditTool();
-	
-	void onResolutionChanged(int value);
+	void onActionOpenFile();
+	void onActionSaveFile();
+	void onActionSaveFileAs();
+	void onActionRectTool();
+	void onActionEditTool();
 	
 	void onCellChangedWater();
 	void onCellChangedIce();
 	void onCellChangedSediment();
+	
+	void onResolutionChanged(int value);
+	
+	bool handleMapEventMousePress(MapView* mapView, QMouseEvent* event);
+	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);
+	bool handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event);
+	
+	void setupToolbar();
+	void highlightCell(H3Index index);
 	
 private:
 	Ui::MainWindow*   ui;
@@ -62,8 +72,24 @@ private:
 	QSpinBox*         resolutionSpinbox;
 	QLabel*           statusLabel;
 	
-private:
-	void setupToolbar();
 };
+
+
+// https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
+class DoubleValidator : public QDoubleValidator
+{
+public:
+	DoubleValidator(double min, double max, int decimals, QObject* parent = nullptr) : QDoubleValidator(min, max, decimals, parent)
+	{}
+	
+	
+	State validate(QString& input, int& pos) const override
+	{
+		if(input.isEmpty())
+			return QValidator::Acceptable;
+		return QDoubleValidator::validate(input, pos);
+	}
+};
+
 
 #endif // MAINWINDOW_H

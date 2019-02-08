@@ -14,22 +14,15 @@ Q_OBJECT
 public:
 	H3State* h3State = nullptr;
 	
-	bool mouseLeftDown  = false;
 	QPoint vsMouseLeftDownPos  = QPoint();
-	bool mouseRightDown = false;
 	QPoint vsMouseRightDownPos = QPoint();
-	
 	QPoint vsMouseMovePos      = QPoint();
-	
-	uint64_t polyfillIndicesCount = 0;
-	H3Index* polyfillIndices = nullptr;
 	
 protected:
 	QRubberBand* rubberband;
 	
 public:
 	explicit MapView(QWidget* parent);
-	void resetPolyfill();
 	
 protected:
 	void drawForeground(QPainter* painter, const QRectF& exposed) override;

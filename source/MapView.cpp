@@ -7,33 +7,6 @@
 #define POLYFILL_WIDTH_FACTOR 0.45
 
 
-uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index** outIndices)
-{
-	GeoCoord geoCorners[4];
-	toGeocoord(ssArea, surfaceSize, geoCorners);
-	
-	GeoPolygon geoPolygon = {};
-	geoPolygon.geofence.numVerts = 4;
-	geoPolygon.geofence.verts = geoCorners;
-	
-	uint64_t indicesLen = maxPolyfillSize(&geoPolygon, resolution);
-	if(indicesLen > 0)
-	{
-		*outIndices = NEW H3Index[indicesLen];
-		if(!*outIndices)
-		{
-			// TODO
-		}
-		polyfill(&geoPolygon, resolution, *outIndices);
-	}
-	else
-	{
-		*outIndices = nullptr;
-	}
-	return indicesLen;
-}
-
-
 void drawEdgesAntimeridian(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSize)
 {
 	// FIXME: Recheck this when it's not 6 am
@@ -189,17 +162,17 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 		}
 	}
 	
-	if(this->polyfillIndices)
+	if(this->h3State->polyfillIndices)
 	{
 		painter->setPen(QPen(QColor(0, 0, 0, 255), getLineThickness(this->h3State->resolution)));
 		painter->setBrush(QBrush(QColor(0, 0, 0, 0), Qt::BrushStyle::NoBrush));
 		
 		GeoBoundary geoBoundary;
-		for(uint64_t i = 0; i < this->polyfillIndicesCount; ++i)
+		for(uint64_t i = 0; i < this->h3State->polyfillIndicesCount; ++i)
 		{
-			if(this->polyfillIndices[i] != H3_INVALID_INDEX)
+			if(this->h3State->polyfillIndices[i] != H3_INVALID_INDEX)
 			{
-				h3ToGeoBoundary(this->polyfillIndices[i], &geoBoundary);
+				h3ToGeoBoundary(this->h3State->polyfillIndices[i], &geoBoundary);
 				drawEdges(painter, &geoBoundary, this->sceneRect().size());
 			}
 		}
@@ -217,18 +190,11 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 }
 
 
-MapView::MapView(QWidget* parent) : QGraphicsView(parent)
+MapView::MapView(QWidget* parent) : QGraphicsView(parent),
+	h3State(&globalH3State)
 {
 	setMouseTracking(true);
 	this->rubberband = new QRubberBand(QRubberBand::Rectangle, this);
-}
-
-
-void MapView::resetPolyfill()
-{
-	delete[] this->polyfillIndices;
-	this->polyfillIndices = nullptr;
-	this->polyfillIndicesCount = 0;
 }
 
 
@@ -237,7 +203,6 @@ void MapView::mousePressEvent(QMouseEvent* event)
 	if(event->button() == Qt::LeftButton)
 	{
 		event->accept();
-		this->mouseLeftDown    = true;
 		this->vsMouseLeftDownPos = event->pos();
 		
 		this->rubberband->setGeometry(QRect(event->pos(), QSize()));
@@ -247,44 +212,24 @@ void MapView::mousePressEvent(QMouseEvent* event)
 	if(event->button() == Qt::RightButton)
 	{
 		event->accept();
-		this->mouseRightDown    = true;
 		this->vsMouseRightDownPos = event->pos();
 		this->setCursor(Qt::ClosedHandCursor);
 	}
 }
 
 
-void MapView::mouseReleaseEvent(QMouseEvent* event)
-{
-	if(event->button() == Qt::LeftButton)
-	{
-		event->accept();
-		this->mouseLeftDown = false;
-
-		QRectF area = mapToScene(this->rubberband->geometry()).boundingRect();
-		delete[] this->polyfillIndices;
-		this->polyfillIndicesCount = polyfillArea(area, sceneRect().size(), this->h3State->resolution, &this->polyfillIndices);
-		this->scene()->invalidate();
-
-		this->rubberband->hide();
-	}
-	else
-	if(event->button() == Qt::RightButton)
-	{
-		event->accept();
-		this->mouseRightDown = false;
-		this->setCursor(Qt::ArrowCursor);
-	}
-	else
-	{
-		event->ignore();
-	}
-}
-
-
 void MapView::mouseMoveEvent(QMouseEvent* event)
 {
-	if(this->mouseLeftDown)
+	if(event->buttons() & Qt::RightButton)
+	{
+		event->accept();
+		QPoint delta = event->pos() - this->vsMouseRightDownPos;
+		this->vsMouseRightDownPos = event->pos();
+		this->horizontalScrollBar()->setValue(this->horizontalScrollBar()->value() - delta.x());
+		this->verticalScrollBar()->setValue(this->verticalScrollBar()->value()     - delta.y());
+	}
+	
+	if(event->buttons() & Qt::LeftButton)
 	{
 		event->accept();
 		this->vsMouseMovePos = event->pos();
@@ -299,13 +244,36 @@ void MapView::mouseMoveEvent(QMouseEvent* event)
 		this->rubberband->setGeometry(vsRect);
 	}
 	
-	if(this->mouseRightDown)
+	if(event->buttons() == Qt::NoButton)
+	{
+		event->ignore();
+	}
+}
+
+
+void MapView::mouseReleaseEvent(QMouseEvent* event)
+{
+	if(event->button() == Qt::LeftButton)
 	{
 		event->accept();
-		QPoint delta = event->pos() - this->vsMouseRightDownPos;
-		this->vsMouseRightDownPos = event->pos();
-		this->horizontalScrollBar()->setValue(this->horizontalScrollBar()->value() - delta.x());
-		this->verticalScrollBar()->setValue(this->verticalScrollBar()->value()     - delta.y());
+		
+		QRectF area = mapToScene(this->rubberband->geometry()).boundingRect();
+		delete[] this->h3State->polyfillIndices;
+		this->h3State->polyfillIndicesCount = polyfillArea(area, sceneRect().size(), this->h3State->resolution, &this->h3State->polyfillIndices);
+		this->scene()->invalidate();
+		
+		this->rubberband->setGeometry(0, 0, 0, 0);
+		this->rubberband->hide();
+	}
+	else
+	if(event->button() == Qt::RightButton)
+	{
+		event->accept();
+		this->setCursor(Qt::ArrowCursor);
+	}
+	else
+	{
+		event->ignore();
 	}
 }
 
