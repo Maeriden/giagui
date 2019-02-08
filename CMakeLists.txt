@@ -47,5 +47,6 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
         h3::h3
+        cpptoml
         Qt5::Widgets
         Qt5::Svg)
