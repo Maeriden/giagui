@@ -69,7 +69,23 @@ void MainWindow::setupToolbar()
 	{
 		QActionGroup* actionGroup = new QActionGroup(this);
 		
-		QAction* rectAction = new QAction(QIcon(":/images/icon-rect.svg"), tr("Rect tool"), actionGroup);
+		QAction* zoomOutAction = new QAction(QIcon::fromTheme("zoom-out"), tr("Zoom Out"), actionGroup);
+		zoomOutAction->setShortcuts(QKeySequence::StandardKey::ZoomOut);
+		zoomOutAction->setStatusTip(tr("Zoom out"));
+		connect(zoomOutAction, &QAction::triggered, this, &MainWindow::onActionZoomOut);
+		
+		QAction* zoomInAction = new QAction(QIcon::fromTheme("zoom-in"), tr("Zoom In"), actionGroup);
+		zoomInAction->setShortcuts(QKeySequence::StandardKey::ZoomIn);
+		zoomInAction->setStatusTip(tr("Zoom in"));
+		connect(zoomInAction,  &QAction::triggered, this, &MainWindow::onActionZoomIn);
+		
+		toolbar->addActions(actionGroup->actions());
+	}
+	toolbar->addSeparator();
+	{
+		QActionGroup* actionGroup = new QActionGroup(this);
+		
+		QAction* rectAction = new QAction(QIcon(":/images/icon-rect.svg"), tr("Rect Tool"), actionGroup);
 		rectAction->setStatusTip(tr("Select area to polyfill"));
 		rectAction->setCheckable(true);
 		rectAction->setChecked(true);
@@ -288,6 +304,20 @@ void MainWindow::onActionSaveFileAs()
 	this->exportPath = filePath;
 	this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 	this->onActionSaveFile();
+}
+
+
+void MainWindow::onActionZoomOut()
+{
+	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
+	this->ui->mapView->zoom(vsAnchor, -1);
+}
+
+
+void MainWindow::onActionZoomIn()
+{
+	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
+	this->ui->mapView->zoom(vsAnchor, +1);
 }
 
 

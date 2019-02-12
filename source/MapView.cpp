@@ -282,7 +282,8 @@ void MapView::wheelEvent(QWheelEvent* event)
 {
 	// NOTE: https://wiki.qt.io/Smooth_Zoom_In_QGraphicsView for a smooth zoom implementation
 	event->accept();
-	int steps = event->angleDelta().y() / 8 / 15; // see QWheelEvent documentation
+	QPoint angleDelta = event->angleDelta();
+	int steps = angleDelta.y() / 8 / 15; // see QWheelEvent documentation
 	this->zoom(event->pos(), steps);
 }
 

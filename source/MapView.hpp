@@ -24,15 +24,15 @@ protected:
 public:
 	explicit MapView(QWidget* parent);
 	
+	void zoom(QPoint vsAnchor, int steps);
+	
 protected:
 	void drawForeground(QPainter* painter, const QRectF& exposed) override;
 
-	void mousePressEvent   (QMouseEvent* event) override;
-	void mouseReleaseEvent (QMouseEvent* event) override;
-	void mouseMoveEvent    (QMouseEvent* event) override;
-	void wheelEvent        (QWheelEvent* event) override;
-	
-	void zoom(QPoint anchor, int steps);
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 };
 
 #endif // MAPVIEW_H

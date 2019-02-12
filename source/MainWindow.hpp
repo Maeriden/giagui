@@ -47,6 +47,8 @@ protected:
 	void onActionOpenFile();
 	void onActionSaveFile();
 	void onActionSaveFileAs();
+	void onActionZoomOut();
+	void onActionZoomIn();
 	void onActionRectTool();
 	void onActionEditTool();
 	
