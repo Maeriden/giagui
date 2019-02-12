@@ -61,7 +61,6 @@ void MainWindow::setupToolbar()
 		QAction* saveAsAction = new QAction(QIcon::fromTheme("document-save-as"), tr("Save As"), actionGroup);
 		saveAsAction->setShortcuts(QKeySequence::StandardKey::SaveAs);
 		saveAsAction->setStatusTip(tr("Save as"));
-//		connect(saveAsAction, &QAction::triggered, this, &MainWindow::onActionSaveFile);
 		connect(saveAsAction, &QAction::triggered, this, &MainWindow::onActionSaveFileAs);
 		
 		toolbar->addActions(actionGroup->actions());
@@ -76,7 +75,7 @@ void MainWindow::setupToolbar()
 		rectAction->setChecked(true);
 		connect(rectAction, &QAction::triggered, this, &MainWindow::onActionRectTool);
 		
-		QAction* editAction = new QAction(QIcon(":/images/icon-edit.svg"), tr("Edit tool"), actionGroup);
+		QAction* editAction = new QAction(QIcon(":/images/icon-edit.svg"), tr("Edit Tool"), actionGroup);
 		editAction->setStatusTip(tr("Edit cell values"));
 		editAction->setCheckable(true);
 		connect(editAction, &QAction::triggered, this, &MainWindow::onActionEditTool);
@@ -242,7 +241,7 @@ void MainWindow::onActionOpenFile()
 			this->ui->mapView->scene()->invalidate();
 			
 			this->exportPath = filePath;
-			this->setWindowTitle(QString("GIA gui - %1").arg(this->exportPath));
+			this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 		}
 		if(error == 1)
 		{
@@ -287,7 +286,7 @@ void MainWindow::onActionSaveFileAs()
 	QString filePath = saveDialog.selectedFiles().first();
 	
 	this->exportPath = filePath;
-	this->setWindowTitle(QString("GIA gui - %1").arg(this->exportPath));
+	this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 	this->onActionSaveFile();
 }
 
