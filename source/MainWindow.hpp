@@ -80,21 +80,4 @@ private:
 };
 
 
-// https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
-class DoubleValidator : public QDoubleValidator
-{
-public:
-	DoubleValidator(double min, double max, int decimals, QObject* parent = nullptr) : QDoubleValidator(min, max, decimals, parent)
-	{}
-	
-	
-	State validate(QString& input, int& pos) const override
-	{
-		if(input.isEmpty())
-			return QValidator::Acceptable;
-		return QDoubleValidator::validate(input, pos);
-	}
-};
-
-
 #endif // MAINWINDOW_H
