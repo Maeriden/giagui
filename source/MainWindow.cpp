@@ -93,12 +93,13 @@ void MainWindow::setupToolbar()
 		layout->setSpacing(6);
 		layout->setContentsMargins(5, 0, 5, 0);
 		
-		
 		QLabel* labelW = new QLabel(tr("Water"), group);
 		layout->addWidget(labelW);
 		
 		this->editWater = new QLineEdit("", group);
 		this->editWater->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+		this->editWater->setMinimumWidth(80);
+		this->editWater->setMaximumWidth(100);
 		this->editWater->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editWater->setEnabled(false);
 		this->editWater->setPlaceholderText(tr("N/A"));
@@ -111,6 +112,8 @@ void MainWindow::setupToolbar()
 		
 		this->editIce = new QLineEdit("", group);
 		this->editIce->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+		this->editIce->setMinimumWidth(80);
+		this->editIce->setMaximumWidth(100);
 		this->editIce->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editIce->setEnabled(false);
 		this->editIce->setPlaceholderText(tr("N/A"));
@@ -123,12 +126,28 @@ void MainWindow::setupToolbar()
 		
 		this->editSediment = new QLineEdit("", group);
 		this->editSediment->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+		this->editSediment->setMinimumWidth(80);
+		this->editSediment->setMaximumWidth(100);
 		this->editSediment->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editSediment->setEnabled(false);
 		this->editSediment->setPlaceholderText(tr("N/A"));
 		this->editSediment->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
 		layout->addWidget(this->editSediment);
 		connect(this->editSediment, &QLineEdit::editingFinished, this, &MainWindow::onCellChangedSediment);
+		
+		QLabel* labelD = new QLabel(tr("Sediment density"), group);
+		layout->addWidget(labelD);
+		
+		this->editDensity = new QLineEdit("", group);
+		this->editDensity->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+		this->editDensity->setMinimumWidth(80);
+		this->editDensity->setMaximumWidth(100);
+		this->editDensity->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+		this->editDensity->setEnabled(false);
+		this->editDensity->setPlaceholderText(tr("N/A"));
+		this->editDensity->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
+		layout->addWidget(this->editDensity);
+		connect(this->editDensity, &QLineEdit::editingFinished, this, &MainWindow::onCellChangedDensity);
 		
 		toolbar->addWidget(group);
 	}
@@ -179,11 +198,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 		this->h3State->activeIndex = H3_INVALID_INDEX;
 		this->ui->mapView->scene()->invalidate();
 		
-		this->editWater->setEnabled(false);
-		this->editIce->setEnabled(false);
-		this->editSediment->setEnabled(false);
-		
-		this->clearLineEditsNoSignal();
+		this->setAllLineEditEnabled(false);
+		this->clearAllLineEditNoSignal();
 	}
 	else
 	{
@@ -219,11 +235,8 @@ void MainWindow::onActionOpenFile()
 			H3State_reset(this->h3State, resolution);
 			this->h3State->cellsData = cellsData;
 			
-			this->editWater->setEnabled(false);
-			this->editIce->setEnabled(false);
-			this->editSediment->setEnabled(false);
-			
-			this->clearLineEditsNoSignal();
+			this->setAllLineEditEnabled(false);
+			this->clearAllLineEditNoSignal();
 			
 			this->resolutionSpinbox->blockSignals(true);
 			this->resolutionSpinbox->setValue(this->h3State->resolution);
@@ -290,11 +303,8 @@ void MainWindow::onActionRectTool()
 	if(QApplication::focusWidget())
 		QApplication::focusWidget()->clearFocus();
 	
-	this->editWater->setEnabled(false);
-	this->editIce->setEnabled(false);
-	this->editSediment->setEnabled(false);
-	
-	this->clearLineEditsNoSignal();
+	this->setAllLineEditEnabled(false);
+	this->clearAllLineEditNoSignal();
 	
 	this->ui->mapView->scene()->invalidate();
 }
@@ -317,7 +327,7 @@ void MainWindow::onCellChangedWater()
 		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
 		if(it != this->h3State->cellsData.end())
 		{
-			if(std::isnan(it->second.ice) && std::isnan(it->second.sediment))
+			if(std::isnan(it->second.ice) && std::isnan(it->second.sediment) && std::isnan(it->second.density))
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.water = DOUBLE_NAN;
@@ -339,7 +349,8 @@ void MainWindow::onCellChangedWater()
 		}
 		else
 		{
-			CellData item = { .water = value, .ice = DOUBLE_NAN, .sediment = DOUBLE_NAN};
+			CellData item = CELLDATA_INIT;
+			item.water = value;
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
@@ -361,7 +372,7 @@ void MainWindow::onCellChangedIce()
 		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
 		if(it != this->h3State->cellsData.end())
 		{
-			if(std::isnan(it->second.water) && std::isnan(it->second.sediment))
+			if(std::isnan(it->second.water) && std::isnan(it->second.sediment) && std::isnan(it->second.density))
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.ice = DOUBLE_NAN;
@@ -383,7 +394,8 @@ void MainWindow::onCellChangedIce()
 		}
 		else
 		{
-			CellData item = { .water = DOUBLE_NAN, .ice = value, .sediment = DOUBLE_NAN};
+			CellData item = CELLDATA_INIT;
+			item.ice = value;
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
@@ -405,7 +417,7 @@ void MainWindow::onCellChangedSediment()
 		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
 		if(it != this->h3State->cellsData.end())
 		{
-			if(std::isnan(it->second.water) && std::isnan(it->second.ice))
+			if(std::isnan(it->second.water) && std::isnan(it->second.ice) && std::isnan(it->second.density))
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.sediment = DOUBLE_NAN;
@@ -427,7 +439,8 @@ void MainWindow::onCellChangedSediment()
 		}
 		else
 		{
-			CellData item = { .water = DOUBLE_NAN, .ice = DOUBLE_NAN, .sediment = value};
+			CellData item = CELLDATA_INIT;
+			item.sediment = value;
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
@@ -438,30 +451,80 @@ void MainWindow::onCellChangedSediment()
 }
 
 
+void MainWindow::onCellChangedDensity()
+{
+	if(this->h3State->activeIndex == H3_INVALID_INDEX)
+		return;
+	
+	// If all values would be NaN, remove cell
+	if(this->editDensity->text().isEmpty())
+	{
+		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
+		if(it != this->h3State->cellsData.end())
+		{
+			if(std::isnan(it->second.water) && std::isnan(it->second.ice) && std::isnan(it->second.sediment))
+				this->h3State->cellsData.erase(it);
+			else
+				it->second.density = DOUBLE_NAN;
+		}
+		
+		this->ui->mapView->scene()->invalidate();
+		return;
+	}
+	
+	bool   isValidNumber;
+	double value = this->editDensity->text().toDouble(&isValidNumber);
+	if(isValidNumber)
+	{
+		// Find item and set value, otherwise make new item with value
+		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
+		if(it != this->h3State->cellsData.end())
+		{
+			it->second.density = value;
+		}
+		else
+		{
+			CellData item = CELLDATA_INIT;
+			item.density = value;
+			this->h3State->cellsData[this->h3State->activeIndex] = item;
+		}
+		
+		this->ui->mapView->scene()->invalidate();
+		// Reset text to actual stored value (in case of conversion weirdness)
+		this->editDensity->setText(QString::number(value, 'f', DECIMAL_DIGITS));
+	}
+}
+
+
 void MainWindow::onResolutionChanged(int resolution)
 {
 	if(resolution == this->h3State->resolution)
 		return;
 	
-	bool confirmed = this->h3State->cellsData.empty();
-	if(!confirmed)
+	if(!this->h3State->cellsData.empty())
 	{
 		QString question = tr("Changing resolution will reset stored data. Proceed?");
-		QMessageBox::StandardButton reply = QMessageBox::question(this, "", question, QMessageBox::Ok|QMessageBox::Cancel);
-		confirmed = reply == QMessageBox::Ok;
+		QMessageBox* box = new QMessageBox(QMessageBox::Question, "", question, QMessageBox::Ok|QMessageBox::Cancel, this);
+		box->setWindowModality(Qt::WindowModal);
+		connect(box, &QMessageBox::finished, this, &MainWindow::onResolutionChangedDialogFinished);
+		box->open();
 	}
-	
-	if(confirmed)
+	else
 	{
+		this->onResolutionChangedDialogFinished(QMessageBox::Ok);
+	}
+}
+
+
+void MainWindow::onResolutionChangedDialogFinished(int dialogResult)
+{
+	if(dialogResult == QMessageBox::Ok)
+	{
+		int resolution = this->resolutionSpinbox->value();
 		H3State_reset(this->h3State, resolution);
 		
-		this->editWater->setEnabled(false);
-		this->editIce->setEnabled(false);
-		this->editSediment->setEnabled(false);
-		
-		this->editWater->clear();
-		this->editIce->clear();
-		this->editSediment->clear();
+		this->setAllLineEditEnabled(false);
+		this->clearAllLineEditNoSignal();
 		
 		this->ui->mapView->scene()->invalidate();
 	}
@@ -484,9 +547,7 @@ void MainWindow::highlightCell(H3Index index)
 		this->h3State->activeIndex = index;
 		this->ui->mapView->scene()->invalidate();
 		
-		this->editWater->setEnabled(true);
-		this->editIce->setEnabled(true);
-		this->editSediment->setEnabled(true);
+		this->setAllLineEditEnabled(true);
 		
 		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
 		if(it != this->h3State->cellsData.end())
@@ -506,10 +567,15 @@ void MainWindow::highlightCell(H3Index index)
 			this->editSediment->blockSignals(true);
 			this->editSediment->setText(text);
 			this->editSediment->blockSignals(false);
+			
+			text = std::isnan(it->second.density)  ? "" : QString::number(it->second.density,  'f', DECIMAL_DIGITS);
+			this->editDensity->blockSignals(true);
+			this->editDensity->setText(text);
+			this->editDensity->blockSignals(false);
 		}
 		else
 		{
-			this->clearLineEditsNoSignal();
+			this->clearAllLineEditNoSignal();
 		}
 		
 		QLineEdit* focused = dynamic_cast<QLineEdit*>(QApplication::focusWidget());
@@ -592,7 +658,16 @@ bool MainWindow::handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event
 }
 
 
-void MainWindow::clearLineEditsNoSignal()
+void MainWindow::setAllLineEditEnabled(bool enabled)
+{
+	this->editWater->setEnabled(enabled);
+	this->editIce->setEnabled(enabled);
+	this->editSediment->setEnabled(enabled);
+	this->editDensity->setEnabled(enabled);
+}
+
+
+void MainWindow::clearAllLineEditNoSignal()
 {
 	this->editWater->blockSignals(true);
 	this->editWater->clear();

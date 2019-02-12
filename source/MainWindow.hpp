@@ -54,6 +54,7 @@ protected:
 	void onCellChangedWater();
 	void onCellChangedIce();
 	void onCellChangedSediment();
+	void onCellChangedDensity();
 	
 	void onResolutionChanged(int value);
 	
@@ -63,15 +64,17 @@ protected:
 	
 	void setupToolbar();
 	void highlightCell(H3Index index);
-	void clearLineEditsNoSignal();
+	void setAllLineEditEnabled(bool enabled);
+	void clearAllLineEditNoSignal();
 	
 private:
-	Ui::MainWindow*   ui;
-	QLineEdit*        editWater;
-	QLineEdit*        editIce;
-	QLineEdit*        editSediment;
-	QSpinBox*         resolutionSpinbox;
-	QLabel*           statusLabel;
+	Ui::MainWindow* ui;
+	QLineEdit*      editWater;
+	QLineEdit*      editIce;
+	QLineEdit*      editSediment;
+	QLineEdit*      editDensity;
+	IntSpinBox*     resolutionSpinbox;
+	QLabel*         statusLabel;
 	
 };
 

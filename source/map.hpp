@@ -77,7 +77,9 @@ struct CellData
 	double water;
 	double ice;
 	double sediment;
+	double density;
 };
+#define CELLDATA_INIT ( (CellData){ .water = DOUBLE_NAN, .ice = DOUBLE_NAN, .sediment = DOUBLE_NAN, .density = DOUBLE_NAN } )
 
 
 struct H3State
