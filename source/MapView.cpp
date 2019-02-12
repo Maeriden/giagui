@@ -5,6 +5,7 @@
 
 
 #define POLYFILL_WIDTH_FACTOR 0.45
+#define POLYFILL_INDEX_THRESHOLD 100000
 
 
 void drawEdgesAntimeridian(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSize)
@@ -259,7 +260,25 @@ void MapView::mouseReleaseEvent(QMouseEvent* event)
 		
 		QRectF area = mapToScene(this->rubberband->geometry()).boundingRect();
 		delete[] this->h3State->polyfillIndices;
-		this->h3State->polyfillIndicesCount = polyfillArea(area, sceneRect().size(), this->h3State->resolution, &this->h3State->polyfillIndices);
+		this->h3State->polyfillIndicesCount = 0;
+		
+		uint64_t polyfillIndicesCount = polyfillAreaCount(area, sceneRect().size(), this->h3State->resolution);
+		if(polyfillIndicesCount < POLYFILL_INDEX_THRESHOLD)
+		{
+			int error = polyfillArea(area, sceneRect().size(), this->h3State->resolution, &this->h3State->polyfillIndices); 
+			if(error == 0)
+			{
+				this->h3State->polyfillIndicesCount = polyfillIndicesCount;
+			}
+			else
+			{
+				emit polyfillFailed(PolyfillError::MEMORY_ALLOCATION);
+			}
+		}
+		else
+		{
+			emit polyfillFailed(PolyfillError::THRESHOLD_EXCEEDED);
+		}
 		this->scene()->invalidate();
 		
 		this->rubberband->setGeometry(0, 0, 0, 0);

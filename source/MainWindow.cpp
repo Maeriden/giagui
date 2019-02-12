@@ -36,6 +36,8 @@ class DoubleValidator : public QDoubleValidator
 {
 public:
 	DoubleValidator(double min, double max, int decimals, QObject* parent = nullptr) : QDoubleValidator(min, max, decimals, parent) {}
+	
+	// Make empty strings a valid "number" (to represent NaN values)
 	State validate(QString& input, int& pos) const override
 	{
 		if(input.isEmpty())
@@ -65,6 +67,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 	// IMPORTANT: https://stackoverflow.com/questions/2445997/qgraphicsview-and-eventfilter 
 	this->mapView->viewport()->installEventFilter(this);
 	this->mapView->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+	
+	connect(this->mapView, &MapView::polyfillFailed, this, &MainWindow::onPolyfillFailed);
 }
 
 
@@ -630,6 +634,20 @@ void MainWindow::onResolutionChangedDialogFinished(int dialogResult)
 		this->resolutionSpinbox->blockSignals(true);
 		this->resolutionSpinbox->setValue(this->h3State->resolution);
 		this->resolutionSpinbox->blockSignals(false);
+	}
+}
+
+
+void MainWindow::onPolyfillFailed(PolyfillError error)
+{
+	if(error == PolyfillError::THRESHOLD_EXCEEDED)
+	{
+		QMessageBox::warning(this, tr("Warning"), tr("Polyfill area too big, Request ignored to avoid slowdown"));
+	}
+	else
+	if(error == PolyfillError::MEMORY_ALLOCATION)
+	{
+		QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to polyfill the selected area"));
 	}
 }
 

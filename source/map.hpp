@@ -228,7 +228,24 @@ bool polyCrossesAntimeridian(GeoBoundary* boundary)
 
 
 inline
-uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index** outIndices)
+uint64_t polyfillAreaCount(QRectF ssArea, QSizeF surfaceSize, int resolution)
+{
+	GeoCoord geoCorners[4];
+	toGeocoord(ssArea, surfaceSize, geoCorners);
+	
+	GeoPolygon geoPolygon = {};
+	geoPolygon.geofence.numVerts = 4;
+	geoPolygon.geofence.verts = geoCorners;
+	
+	// TODO: I suspect the result of maxPolyfillSize is not the actual number of polygons we need to draw
+	// If that is the case, find a way to return the actual number of polygons
+	uint64_t indicesLen = maxPolyfillSize(&geoPolygon, resolution);
+	return indicesLen;
+}
+
+
+inline
+int polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index** outIndices)
 {
 	GeoCoord geoCorners[4];
 	toGeocoord(ssArea, surfaceSize, geoCorners);
@@ -243,7 +260,7 @@ uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index
 		*outIndices = NEW H3Index[indicesLen];
 		if(!*outIndices)
 		{
-			// TODO
+			return 1;
 		}
 		polyfill(&geoPolygon, resolution, *outIndices);
 	}
@@ -251,7 +268,8 @@ uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index
 	{
 		*outIndices = nullptr;
 	}
-	return indicesLen;
+	
+	return 0;
 }
 
 

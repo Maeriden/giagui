@@ -60,6 +60,8 @@ protected:
 	void onResolutionChanged(int value);
 	void onResolutionChangedDialogFinished(int dialogResult);
 	
+	void onPolyfillFailed(PolyfillError error);
+	
 	bool handleMapEventMousePress(MapView* mapView, QMouseEvent* event);
 	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);
 	bool handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event);

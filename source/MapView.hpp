@@ -7,6 +7,13 @@
 #include "map.hpp"
 
 
+enum PolyfillError
+{
+	THRESHOLD_EXCEEDED = 1,
+	MEMORY_ALLOCATION = 2,
+};
+
+
 class MapView : public QGraphicsView
 {
 Q_OBJECT
@@ -33,6 +40,9 @@ protected:
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void mouseMoveEvent(QMouseEvent* event) override;
 	void wheelEvent(QWheelEvent* event) override;
+	
+signals:
+	void polyfillFailed(PolyfillError error);
 };
 
 #endif // MAPVIEW_H
