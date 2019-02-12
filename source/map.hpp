@@ -2,6 +2,7 @@
 #define MAP_H
 
 #include <cmath>
+#include <map>
 #include <h3/h3api.h>
 #include <QRectF>
 #include <QSizeF>
@@ -253,5 +254,8 @@ uint64_t polyfillArea(QRectF ssArea, QSizeF surfaceSize, int resolution, H3Index
 	return indicesLen;
 }
 
+
+int importFile(const char* filePath, int* resolution, std::map<H3Index, CellData>* data);
+int exportFile(const char* filePath, int  resolution, std::map<H3Index, CellData>& data);
 
 #endif // MAP_H

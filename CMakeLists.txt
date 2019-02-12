@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable")
 
 include_directories(source)
-#include_directories(${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen/include)
 
 option(ENABLE_ASSERT "Enable additional assertions" OFF)
 if(ENABLE_ASSERT)
@@ -30,8 +29,8 @@ find_package(Qt5Svg     REQUIRED)
 
 set(SOURCE_FILES
         source/main.cpp
+        source/map.hpp source/map.cpp
         source/MainWindow.cpp source/MainWindow.hpp
-        source/map.hpp
         source/MapView.cpp source/MapView.hpp)
 
 set(UI_FILES

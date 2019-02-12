@@ -1,7 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <fstream>
 #include <QLabel>
 #include <QMainWindow>
 #include <QLineEdit>
