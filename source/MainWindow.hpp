@@ -23,6 +23,9 @@ enum MapTool
 };
 
 
+class IntSpinBox;
+
+
 class MainWindow : public QMainWindow
 {
 Q_OBJECT
@@ -58,6 +61,7 @@ protected:
 	void onCellChangedDensity();
 	
 	void onResolutionChanged(int value);
+	void onResolutionChangedDialogFinished(int dialogResult);
 	
 	bool handleMapEventMousePress(MapView* mapView, QMouseEvent* event);
 	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);

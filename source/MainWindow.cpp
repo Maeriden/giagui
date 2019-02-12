@@ -9,6 +9,19 @@
 #include <QtWidgets/QMessageBox>
 
 
+#include <QSpinBox>
+// https://bugreports.qt.io/browse/QTBUG-14259
+class IntSpinBox : public QSpinBox
+{
+public:
+	explicit IntSpinBox(QWidget* parent = nullptr) : QSpinBox(parent) {}
+	void timerEvent(QTimerEvent *event) override
+	{
+		QWidget::timerEvent(event); // NOLINT(bugprone-parent-virtual-call)
+	}
+};
+
+
 // https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
 class DoubleValidator : public QDoubleValidator
 {
@@ -180,11 +193,12 @@ void MainWindow::setupToolbar()
 		QLabel* label = new QLabel(tr("Resolution"), this);
 		toolbar->addWidget(label);
 		
-		this->resolutionSpinbox = new QSpinBox(this);
-		this->resolutionSpinbox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+		this->resolutionSpinbox = new IntSpinBox(this);
+		this->resolutionSpinbox->setFocusPolicy(Qt::NoFocus);
 		this->resolutionSpinbox->setMinimum(0);
 		this->resolutionSpinbox->setMaximum(MAX_SUPPORTED_RESOLUTION);
-		connect(this->resolutionSpinbox, qOverload<int>(&QSpinBox::valueChanged), this, &MainWindow::onResolutionChanged);
+		connect(this->resolutionSpinbox, qOverload<int>(&IntSpinBox::valueChanged), this, &MainWindow::onResolutionChanged);
+//		connect(this->resolutionSpinbox, &IntSpinBox::valueChanged, this, &MainWindow::onResolutionChanged);
 		toolbar->addWidget(this->resolutionSpinbox);
 	}
 }
