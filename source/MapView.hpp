@@ -24,7 +24,7 @@ protected:
 public:
 	explicit MapView(QWidget* parent);
 	
-	void zoom(QPoint vsAnchor, int steps);
+	void zoom(QPoint vsAnchor, double steps);
 	
 protected:
 	void drawForeground(QPainter* painter, const QRectF& exposed) override;

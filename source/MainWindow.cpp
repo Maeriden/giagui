@@ -336,14 +336,14 @@ void MainWindow::onActionSaveFileAs()
 void MainWindow::onActionZoomOut()
 {
 	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
-	this->ui->mapView->zoom(vsAnchor, -1);
+	this->ui->mapView->zoom(vsAnchor, -1.0);
 }
 
 
 void MainWindow::onActionZoomIn()
 {
 	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
-	this->ui->mapView->zoom(vsAnchor, +1);
+	this->ui->mapView->zoom(vsAnchor, +1.0);
 }
 
 
