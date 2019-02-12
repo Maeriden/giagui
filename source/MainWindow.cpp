@@ -1,6 +1,6 @@
 #include "MainWindow.hpp"
-#include "ui_MainWindow.h"
 
+#include <QApplication>
 #include <QHBoxLayout>
 #include <QGraphicsScene>
 #include <QtGui/QDoubleValidator>
@@ -37,38 +37,74 @@ public:
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
-	h3State(&globalH3State),
-	ui(new Ui::MainWindow)
+	h3State(&globalH3State)
 {
 	this->h3State->resolution = 0;
 	this->h3State->activeIndex = H3_INVALID_INDEX;
 	this->mapTool = MapTool::Rect;
 	
-	this->ui->setupUi(this);
+	this->setupUi();
 	this->setupToolbar();
 	
 	this->statusLabel = new QLabel();
-	this->ui->statusBar->addWidget(this->statusLabel);
+	this->statusBar->addWidget(this->statusLabel);
 	
 	QGraphicsScene* scene = new QGraphicsScene(this);
 	scene->addItem(new QGraphicsSvgItem(":/images/world.svg"));
-	this->ui->mapView->setScene(scene);
+	this->mapView->setScene(scene);
 	
 	// IMPORTANT: https://stackoverflow.com/questions/2445997/qgraphicsview-and-eventfilter 
-	this->ui->mapView->viewport()->installEventFilter(this);
-	this->ui->mapView->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+	this->mapView->viewport()->installEventFilter(this);
+	this->mapView->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 }
 
 
-MainWindow::~MainWindow()
+void MainWindow::setupUi()
 {
-	delete this->ui;
-}
+	if (objectName().isEmpty())
+		setObjectName(QString::fromUtf8("MainWindow"));
+	resize(1000, 750);
+	centralWidget = new QWidget(this);
+	centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
+	gridLayout = new QGridLayout(centralWidget);
+	gridLayout->setSpacing(0);
+	gridLayout->setContentsMargins(11, 11, 11, 11);
+	gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+	gridLayout->setContentsMargins(0, 0, 0, 0);
+	mapView = new MapView(centralWidget);
+	mapView->setObjectName(QString::fromUtf8("mapView"));
+	QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	sizePolicy.setHorizontalStretch(0);
+	sizePolicy.setVerticalStretch(0);
+	sizePolicy.setHeightForWidth(mapView->sizePolicy().hasHeightForWidth());
+	mapView->setSizePolicy(sizePolicy);
+	mapView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	mapView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	mapView->setDragMode(QGraphicsView::NoDrag);
+	
+	gridLayout->addWidget(mapView, 0, 0, 1, 1);
+	
+	setCentralWidget(centralWidget);
+	mainToolBar = new QToolBar(this);
+	mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
+	mainToolBar->setEnabled(true);
+	mainToolBar->setMovable(false);
+	mainToolBar->setAllowedAreas(Qt::TopToolBarArea);
+	addToolBar(Qt::TopToolBarArea, mainToolBar);
+	statusBar = new QStatusBar(this);
+	statusBar->setObjectName(QString::fromUtf8("statusBar"));
+	statusBar->setSizeGripEnabled(true);
+	setStatusBar(statusBar);
+	
+	setWindowTitle(QApplication::translate("MainWindow", "GIA gui", nullptr));
+	
+	QMetaObject::connectSlotsByName(this);
+} // setupUi
 
 
 void MainWindow::setupToolbar()
 {
-	QToolBar* toolbar = this->ui->mainToolBar;
+	QToolBar* toolbar = this->mainToolBar;
 	
 	{
 		QActionGroup* actionGroup = new QActionGroup(this);
@@ -234,7 +270,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 	{
 		event->accept();
 		this->h3State->activeIndex = H3_INVALID_INDEX;
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		
 		this->setAllLineEditEnabled(false);
 		this->clearAllLineEditNoSignal();
@@ -280,7 +316,7 @@ void MainWindow::onActionOpenFile()
 			this->resolutionSpinbox->setValue(this->h3State->resolution);
 			this->resolutionSpinbox->blockSignals(false);
 			
-			this->ui->mapView->scene()->invalidate();
+			this->mapView->scene()->invalidate();
 			
 			this->exportPath = filePath;
 			this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
@@ -335,15 +371,15 @@ void MainWindow::onActionSaveFileAs()
 
 void MainWindow::onActionZoomOut()
 {
-	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
-	this->ui->mapView->zoom(vsAnchor, -1.0);
+	QPoint vsAnchor = this->mapView->viewport()->rect().center();
+	this->mapView->zoom(vsAnchor, -1.0);
 }
 
 
 void MainWindow::onActionZoomIn()
 {
-	QPoint vsAnchor = this->ui->mapView->viewport()->rect().center();
-	this->ui->mapView->zoom(vsAnchor, +1.0);
+	QPoint vsAnchor = this->mapView->viewport()->rect().center();
+	this->mapView->zoom(vsAnchor, +1.0);
 }
 
 
@@ -358,7 +394,7 @@ void MainWindow::onActionRectTool()
 	this->setAllLineEditEnabled(false);
 	this->clearAllLineEditNoSignal();
 	
-	this->ui->mapView->scene()->invalidate();
+	this->mapView->scene()->invalidate();
 }
 
 
@@ -385,7 +421,7 @@ void MainWindow::onCellChangedWater()
 				it->second.water = DOUBLE_NAN;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -406,7 +442,7 @@ void MainWindow::onCellChangedWater()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editWater->setText(QString::number(value, 'f', DECIMAL_DIGITS));
 	}
@@ -430,7 +466,7 @@ void MainWindow::onCellChangedIce()
 				it->second.ice = DOUBLE_NAN;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -451,7 +487,7 @@ void MainWindow::onCellChangedIce()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editIce->setText(QString::number(value, 'f', DECIMAL_DIGITS));
 	}
@@ -475,7 +511,7 @@ void MainWindow::onCellChangedSediment()
 				it->second.sediment = DOUBLE_NAN;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -496,7 +532,7 @@ void MainWindow::onCellChangedSediment()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editSediment->setText(QString::number(value, 'f', DECIMAL_DIGITS));
 	}
@@ -520,7 +556,7 @@ void MainWindow::onCellChangedDensity()
 				it->second.density = DOUBLE_NAN;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -541,7 +577,7 @@ void MainWindow::onCellChangedDensity()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editDensity->setText(QString::number(value, 'f', DECIMAL_DIGITS));
 	}
@@ -578,7 +614,7 @@ void MainWindow::onResolutionChangedDialogFinished(int dialogResult)
 		this->setAllLineEditEnabled(false);
 		this->clearAllLineEditNoSignal();
 		
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 	}
 	else
 	{
@@ -597,7 +633,7 @@ void MainWindow::highlightCell(H3Index index)
 	if(this->h3State->activeIndex != index)
 	{
 		this->h3State->activeIndex = index;
-		this->ui->mapView->scene()->invalidate();
+		this->mapView->scene()->invalidate();
 		
 		this->setAllLineEditEnabled(true);
 		

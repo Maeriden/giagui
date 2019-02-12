@@ -34,7 +34,7 @@ set(SOURCE_FILES
         source/MapView.cpp source/MapView.hpp)
 
 set(UI_FILES
-        source/MainWindow.ui)
+        )
 
 set(RESOURCE_FILES
         resources/resources.qrc)

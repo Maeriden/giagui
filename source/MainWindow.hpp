@@ -6,14 +6,12 @@
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QMouseEvent>
+#include <QGridLayout>
+#include <QToolBar>
+#include <QStatusBar>
 
 #include "map.hpp"
 #include "MapView.hpp"
-
-
-namespace Ui {
-class MainWindow;
-}
 
 
 enum MapTool
@@ -40,7 +38,6 @@ public:
 	
 public:
 	explicit MainWindow(QWidget *parent = nullptr);
-	~MainWindow() override;
 	
 protected:
 	bool eventFilter(QObject* o, QEvent* e) override;
@@ -72,14 +69,21 @@ protected:
 	void setAllLineEditEnabled(bool enabled);
 	void clearAllLineEditNoSignal();
 	
+	void setupUi();
+	
 private:
-	Ui::MainWindow* ui;
-	QLineEdit*      editWater;
-	QLineEdit*      editIce;
-	QLineEdit*      editSediment;
-	QLineEdit*      editDensity;
-	IntSpinBox*     resolutionSpinbox;
-	QLabel*         statusLabel;
+	QWidget*     centralWidget;
+	QGridLayout* gridLayout;
+	MapView*     mapView;
+	QToolBar*    mainToolBar;
+	QStatusBar*  statusBar;
+	
+	QLineEdit*  editWater;
+	QLineEdit*  editIce;
+	QLineEdit*  editSediment;
+	QLineEdit*  editDensity;
+	IntSpinBox* resolutionSpinbox;
+	QLabel*     statusLabel;
 	
 };
 
