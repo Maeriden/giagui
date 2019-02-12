@@ -15,9 +15,18 @@ class IntSpinBox : public QSpinBox
 {
 public:
 	explicit IntSpinBox(QWidget* parent = nullptr) : QSpinBox(parent) {}
+	
+	// Override default behavior of stepping if step buttons are held down
 	void timerEvent(QTimerEvent *event) override
 	{
 		QWidget::timerEvent(event); // NOLINT(bugprone-parent-virtual-call)
+	}
+	
+	// Do not highlight the text in the spinbox after step buttons are pressed
+	void stepBy(int steps) override
+	{
+		QSpinBox::stepBy(steps);
+		lineEdit()->deselect();
 	}
 };
 
