@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full"
-     width="720" height="360" viewBox="0 0 720 360"
-     viewport-fill="blue">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full">
 
+<!-- DO NOT USE A STROKE it kills rendering performance -->
 <style type="text/css">
 .country {
 	opacity:1;
-	fill:#444444;
+	fill:#999999;
 	fill-opacity:1;
 	fill-rule:evenodd;
 	stroke:none;
@@ -18,6 +17,8 @@ Example for painting countries:
 }
 */
 </style>
+
+<rect id="background" width="720" height="360" fill="#a7cdf2"/>
 
 <g id="positioner" transform="translate(360, 180) scale(2, -2)">
 

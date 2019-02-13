@@ -112,7 +112,7 @@ void MainWindow::setupUi()
 	setWindowTitle(QApplication::translate("MainWindow", "GIA gui", nullptr));
 	
 	QMetaObject::connectSlotsByName(this);
-} // setupUi
+}
 
 
 void MainWindow::setupToolbar()

@@ -144,15 +144,14 @@ void drawPolygon(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSize
 
 void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 {
-	painter->setPen(QPen(QColor(255, 0, 0, 255), 1));
-	painter->drawRect(sceneRect());
-	
 	if(!this->h3State)
 		return;
 	
+	qreal strokeWidth = getLineThickness(this->h3State->resolution);
+	
 	if(!this->h3State->cellsData.empty())
 	{
-		painter->setPen(QPen(QColor(0, 0, 255, 63), getLineThickness(this->h3State->resolution)));
+		painter->setPen(QPen(QColor(0, 0, 255, 63), strokeWidth));
 		painter->setBrush(QBrush(QColor(0, 0, 255, 63), Qt::BrushStyle::SolidPattern));
 		
 		GeoBoundary geoBoundary;
@@ -165,7 +164,7 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 	
 	if(this->h3State->polyfillIndices)
 	{
-		painter->setPen(QPen(QColor(0, 0, 0, 255), getLineThickness(this->h3State->resolution)));
+		painter->setPen(QPen(QColor(0, 0, 0, 255), strokeWidth));
 		painter->setBrush(QBrush(QColor(0, 0, 0, 0), Qt::BrushStyle::NoBrush));
 		
 		GeoBoundary geoBoundary;
@@ -181,7 +180,7 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 	
 	if(this->h3State->activeIndex != H3_INVALID_INDEX)
 	{
-		painter->setPen(QPen(QColor(255, 0, 0, 63), getLineThickness(this->h3State->resolution)));
+		painter->setPen(QPen(QColor(255, 0, 0, 63), strokeWidth));
 		painter->setBrush(QBrush(QColor(255, 0, 0, 63), Qt::BrushStyle::SolidPattern));
 		
 		GeoBoundary geoBoundary;
