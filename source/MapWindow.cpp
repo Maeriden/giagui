@@ -292,6 +292,29 @@ void MapWindow::keyPressEvent(QKeyEvent* event)
 }
 
 
+void MapWindow::closeEvent(QCloseEvent* event)
+{
+	bool confirmed = !isWindowModified(); 
+	if(!confirmed)
+	{
+		QString title    = "";
+		QString question = tr("There are unsaved changes. Close anyway?");
+		int reply = QMessageBox::question(this, title, question);
+		confirmed = reply == QMessageBox::Yes;
+	}
+	
+	if(confirmed)
+	{
+		event->accept();
+		H3State_reset(this->h3State, 0);
+	}
+	else
+	{
+		event->ignore();
+	}
+}
+
+
 void MapWindow::onActionOpenFile()
 {
 	QString caption = tr("Import data");

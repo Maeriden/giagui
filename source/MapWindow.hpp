@@ -43,6 +43,7 @@ protected:
 	bool eventFilter(QObject* o, QEvent* e) override;
 	
 	void keyPressEvent(QKeyEvent *event) override;
+	void closeEvent(QCloseEvent* event) override;
 	
 	void onActionOpenFile();
 	void onActionSaveFile();
