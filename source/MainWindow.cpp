@@ -24,7 +24,7 @@ public:
 
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
-	mapWindow(new MapWindow),
+	mapWindow(nullptr),
 	simulationData(new SimulationData{}),
 	ui(new Ui::MainWindow)
 {
@@ -118,6 +118,14 @@ void MainWindow::onActionSaveFileAs()
 
 void MainWindow::onActionOpenEditor()
 {
+	if(this->mapWindow)
+	{
+		assert(this->mapWindow->isVisible());
+		return;
+	}
+	this->mapWindow = new MapWindow(this);
+	this->mapWindow->setAttribute(Qt::WA_DeleteOnClose, true);
+	connect(this->mapWindow, &QMainWindow::destroyed, this, &MainWindow::onDestroyedMapWindow);
 	this->mapWindow->show();
 }
 
@@ -154,6 +162,13 @@ void MainWindow::onEditingFinishedOuterInput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
 	this->simulationData->outerInput = lineEdit->text().toLocal8Bit().constData();
+}
+
+
+void MainWindow::onDestroyedMapWindow(QObject* widget)
+{
+	assert(widget == this->mapWindow);
+	this->mapWindow = nullptr;
 }
 
 

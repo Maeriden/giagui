@@ -40,6 +40,7 @@ protected:
 	void onEditingFinishedOuterValue();
 	void onEditingFinishedOuterInput();
 	
+	void onDestroyedMapWindow(QObject* widget);
 	
 private:
 	void setupUi();
