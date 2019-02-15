@@ -62,18 +62,26 @@ int exportFile(const char* filePath, int resolution, std::map<H3Index, CellData>
 	if(!stream.is_open())
 		return 1;
 	
-	stream << "[h3]" << std::endl;
-	stream << "resolution = " << resolution << std::endl;
-	stream << "type = '4f'" << std::endl;
-	stream << std::endl;
-	stream << "[h3.values]" << std::endl << std::hex;
-	for(auto& it : data)
+	try
 	{
-		double water    = std::isnan(it.second.water)    ? 0.0 : it.second.water;
-		double ice      = std::isnan(it.second.ice)      ? 0.0 : it.second.ice;
-		double sediment = std::isnan(it.second.sediment) ? 0.0 : it.second.sediment;
-		double density  = std::isnan(it.second.density)  ? 0.0 : it.second.density;
-		stream << it.first << " = [" << water << "," << ice << "," << sediment << "," << density << ']' << std::endl;
+		stream << "[h3]"          << std::endl;
+		stream << "resolution = " << resolution << std::endl;
+		stream << "type = '4f'"   << std::endl;
+		stream << std::endl;
+		stream << "[h3.values]"   << std::endl;
+		stream << std::hex;
+		for(auto& it : data)
+		{
+			double water    = std::isnan(it.second.water)    ? 0.0 : it.second.water;
+			double ice      = std::isnan(it.second.ice)      ? 0.0 : it.second.ice;
+			double sediment = std::isnan(it.second.sediment) ? 0.0 : it.second.sediment;
+			double density  = std::isnan(it.second.density)  ? 0.0 : it.second.density;
+			stream << it.first << " = [" << water << "," << ice << "," << sediment << "," << density << ']' << std::endl;
+		}
+	}
+	catch(std::ostream::failure& ex)
+	{
+		return 2;
 	}
 	return 0;
 }
