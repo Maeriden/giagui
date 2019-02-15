@@ -109,8 +109,6 @@ void MapWindow::setupUi()
 	statusBar->setSizeGripEnabled(true);
 	setStatusBar(statusBar);
 	
-	setWindowTitle(QApplication::translate("MapWindow", "GIA gui", nullptr));
-	
 	QMetaObject::connectSlotsByName(this);
 }
 
@@ -333,7 +331,6 @@ void MapWindow::onActionOpenFile()
 			this->exportPath = filePath;
 			setWindowFilePath(this->exportPath);
 			setWindowModified(false);
-			this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 		}
 		if(error == 1)
 		{
@@ -387,7 +384,6 @@ void MapWindow::onActionSaveFileAs()
 	QString filePath = saveDialog.selectedFiles().first();
 	
 	this->exportPath = filePath;
-	this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 	this->onActionSaveFile();
 }
 
