@@ -74,7 +74,7 @@ MapWindow::MapWindow(QWidget *parent) : QMainWindow(parent),
 
 void MapWindow::setupUi()
 {
-	if (objectName().isEmpty())
+	if(objectName().isEmpty())
 		setObjectName(QString::fromUtf8("MapWindow"));
 	resize(1000, 750);
 	centralWidget = new QWidget(this);
@@ -247,7 +247,6 @@ void MapWindow::setupToolbar()
 		this->resolutionSpinbox->setMinimum(0);
 		this->resolutionSpinbox->setMaximum(MAX_SUPPORTED_RESOLUTION);
 		connect(this->resolutionSpinbox, qOverload<int>(&IntSpinBox::valueChanged), this, &MapWindow::onResolutionChanged);
-//		connect(this->resolutionSpinbox, &IntSpinBox::valueChanged, this, &MapWindow::onResolutionChanged);
 		toolbar->addWidget(this->resolutionSpinbox);
 	}
 }
@@ -332,6 +331,8 @@ void MapWindow::onActionOpenFile()
 			this->mapView->scene()->invalidate();
 			
 			this->exportPath = filePath;
+			setWindowFilePath(this->exportPath);
+			setWindowModified(false);
 			this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
 		}
 		if(error == 1)
@@ -355,6 +356,11 @@ void MapWindow::onActionSaveFile()
 	}
 	
 	int error = exportFile(this->exportPath.toLocal8Bit().constData(), this->h3State->resolution, this->h3State->cellsData);
+	if(error == 0)
+	{
+		setWindowFilePath(this->exportPath);
+		setWindowModified(false);
+	}
 	if(error == 1)
 	{
 		QMessageBox::information(this, tr("Error"), tr("Unable to save file"));
@@ -436,9 +442,10 @@ void MapWindow::onCellChangedWater()
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.water = DOUBLE_NAN;
+			
+			setWindowModified(true);
+			this->mapView->scene()->invalidate();
 		}
-		
-		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -459,6 +466,7 @@ void MapWindow::onCellChangedWater()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
+		setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editWater->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -481,9 +489,10 @@ void MapWindow::onCellChangedIce()
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.ice = DOUBLE_NAN;
+			
+			setWindowModified(true);
+			this->mapView->scene()->invalidate();
 		}
-		
-		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -503,7 +512,7 @@ void MapWindow::onCellChangedIce()
 			item.ice = value;
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
-		
+		setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editIce->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -526,9 +535,10 @@ void MapWindow::onCellChangedSediment()
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.sediment = DOUBLE_NAN;
+			
+			setWindowModified(true);
+			this->mapView->scene()->invalidate();
 		}
-		
-		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -549,6 +559,7 @@ void MapWindow::onCellChangedSediment()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
+		setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editSediment->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -571,9 +582,10 @@ void MapWindow::onCellChangedDensity()
 				this->h3State->cellsData.erase(it);
 			else
 				it->second.density = DOUBLE_NAN;
+			
+			setWindowModified(true);
+			this->mapView->scene()->invalidate();
 		}
-		
-		this->mapView->scene()->invalidate();
 		return;
 	}
 	
@@ -594,6 +606,7 @@ void MapWindow::onCellChangedDensity()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
+		setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editDensity->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -616,7 +629,12 @@ void MapWindow::onResolutionChanged(int resolution)
 	}
 	else
 	{
-		this->onResolutionChangedDialogFinished(QMessageBox::Ok);
+		H3State_reset(this->h3State, resolution);
+		
+		this->setAllLineEditEnabled(false);
+		this->clearAllLineEditNoSignal();
+		
+		this->mapView->scene()->invalidate();
 	}
 }
 
@@ -630,6 +648,8 @@ void MapWindow::onResolutionChangedDialogFinished(int dialogResult)
 		
 		this->setAllLineEditEnabled(false);
 		this->clearAllLineEditNoSignal();
+		
+		setWindowModified(true);
 		
 		this->mapView->scene()->invalidate();
 	}
