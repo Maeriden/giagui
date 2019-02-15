@@ -1,93 +1,53 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef GIAGUI_MAINWINDOW_HPP
+#define GIAGUI_MAINWINDOW_HPP
 
-#include <QLabel>
+#include "ui_mainwindow.h"
 #include <QMainWindow>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QMouseEvent>
-#include <QGridLayout>
-#include <QToolBar>
-#include <QStatusBar>
-
-#include "map.hpp"
-#include "MapView.hpp"
 
 
-enum MapTool
+struct SimulationData
 {
-	Rect,
-	Edit,
+	double      power;
+	const char* output;
+	double      innerValue;
+	double      outerValue;
+	const char* outerInput;
 };
 
 
-class IntSpinBox;
-
+class MapWindow;
 
 class MainWindow : public QMainWindow
 {
 Q_OBJECT
+	MapWindow*      mapWindow;
+	SimulationData* simulationData;
+	QString         exportPath;
 	
 public:
-	static constexpr int DECIMAL_DIGITS = 6;
-
-public:
-	H3State* h3State;
-	MapTool  mapTool;
-	QString  exportPath;
+	explicit MainWindow(QWidget* parent = nullptr);
 	
-public:
-	explicit MainWindow(QWidget *parent = nullptr);
 	
 protected:
-	bool eventFilter(QObject* o, QEvent* e) override;
-	
-	void keyPressEvent(QKeyEvent *event) override;
-	
 	void onActionOpenFile();
 	void onActionSaveFile();
 	void onActionSaveFileAs();
-	void onActionZoomOut();
-	void onActionZoomIn();
-	void onActionRectTool();
-	void onActionEditTool();
+	void onActionOpenEditor();
 	
-	void onCellChangedWater();
-	void onCellChangedIce();
-	void onCellChangedSediment();
-	void onCellChangedDensity();
+	void onEditingFinishedPower();
+	void onEditingFinishedOutput();
+	void onEditingFinishedInnerValue();
+	void onEditingFinishedOuterValue();
+	void onEditingFinishedOuterInput();
 	
-	void onResolutionChanged(int value);
-	void onResolutionChangedDialogFinished(int dialogResult);
-	
-	void onPolyfillFailed(PolyfillError error);
-	
-	bool handleMapEventMousePress(MapView* mapView, QMouseEvent* event);
-	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);
-	bool handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event);
-	
-	void setupToolbar();
-	void highlightCell(H3Index index);
-	void setAllLineEditEnabled(bool enabled);
-	void clearAllLineEditNoSignal();
-	
-	void setupUi();
 	
 private:
-	QWidget*     centralWidget;
-	QGridLayout* gridLayout;
-	MapView*     mapView;
-	QToolBar*    mainToolBar;
-	QStatusBar*  statusBar;
+	void setupUi();
 	
-	QLineEdit*  editWater;
-	QLineEdit*  editIce;
-	QLineEdit*  editSediment;
-	QLineEdit*  editDensity;
-	IntSpinBox* resolutionSpinbox;
-	QLabel*     statusLabel;
 	
+private:
+	Ui::MainWindow* ui;
 };
 
 
-#endif // MAINWINDOW_H
+#endif //GIAGUI_MAINWINDOW_HPP

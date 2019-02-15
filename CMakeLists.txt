@@ -31,10 +31,11 @@ set(SOURCE_FILES
         source/main.cpp
         source/map.hpp source/map.cpp
         source/MainWindow.cpp source/MainWindow.hpp
+        source/MapWindow.cpp source/MapWindow.hpp
         source/MapView.cpp source/MapView.hpp)
 
 set(UI_FILES
-        )
+        source/mainwindow.ui)
 
 set(RESOURCE_FILES
         resources/resources.qrc)

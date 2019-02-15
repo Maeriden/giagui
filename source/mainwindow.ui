@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>200</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>GIA gui</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QFormLayout" name="formLayout">
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="editPower"/>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="labelPower">
+      <property name="text">
+       <string>Mesh Power</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="labelInnerValue">
+      <property name="text">
+       <string>Mesh Inner Value</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLineEdit" name="editInnerValue"/>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="labelOuterValue">
+      <property name="text">
+       <string>Mesh Outer Value</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QLineEdit" name="editOuterValue"/>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="labelOuterInput">
+      <property name="text">
+       <string>Mesh Outer Input</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>2</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLineEdit" name="editOuterInput"/>
+      </item>
+      <item>
+       <widget class="QToolButton" name="buttonOuterInput">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="icon">
+         <iconset theme="document-open"/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="labelOutput">
+      <property name="text">
+       <string>Mesh Output</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="editOutput"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>400</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSaveAs"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionEditor"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuTools"/>
+  </widget>
+  <action name="actionEditor">
+   <property name="text">
+    <string>Open Mesh Editor...</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+  </action>
+ </widget>
+ <tabstops>
+  <tabstop>editPower</tabstop>
+  <tabstop>editOutput</tabstop>
+  <tabstop>editInnerValue</tabstop>
+  <tabstop>editOuterValue</tabstop>
+  <tabstop>editOuterInput</tabstop>
+  <tabstop>buttonOuterInput</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
