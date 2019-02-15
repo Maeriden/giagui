@@ -11,6 +11,11 @@ if(ENABLE_ASSERT)
     add_compile_definitions(ENABLE_ASSERT=1)
 endif()
 
+option(ENABLE_DRAW_SELECTION "Enable drawing the currently selected polygon in edit mode" OFF)
+if(ENABLE_DRAW_EDIT_MODE_SELECTION)
+    add_compile_definitions(ENABLE_DRAW_EDIT_MODE_SELECTION=1)
+endif()
+
 find_package(h3 REQUIRED)
 
 find_package(cpptoml REQUIRED)

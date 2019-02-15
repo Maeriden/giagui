@@ -13,7 +13,7 @@
 
 #define PI 3.14159265358979323846
 #define NORMALIZE_LON(lon) ( ((lon) + PI)   / (2*PI) )
-#define NORMALIZE_LAT(lat) ( ((lat) - PI/2) / ( -PI) )
+#define NORMALIZE_LAT(lat) ( ((lat) - PI/2) / ( -PI) ) // NOTE: In Qt scene, 0 is top
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L35
 #ifndef H3_MODE_OFFSET
@@ -221,9 +221,22 @@ bool polyCrossesAntimeridian(GeoBoundary* boundary)
 	// Polygon crosses antimeridian if any pair of points have latitudes
 	// of opposite sign and they are more than half a globe away
 	for(int i = 1; i < boundary->numVerts; ++i)
-		if(std::abs(boundary->verts[0].lon - boundary->verts[i].lon) > PI)
+		if(edgeCrossesAntimeridian(boundary->verts[0].lon, boundary->verts[i].lon))
 			return true;
 	return false;
+}
+
+
+inline
+int countCrossingPoints(GeoBoundary* boundary)
+{
+	// Polygon crosses antimeridian if any pair of points have latitudes
+	// of opposite sign and they are more than half a globe away
+	int result = 0;
+	for(int i = 0; i < boundary->numVerts; ++i)
+		if(edgeCrossesAntimeridian(boundary->verts[i].lon, boundary->verts[(i+1)%boundary->numVerts].lon))
+			result += 1;
+	return result;
 }
 
 
