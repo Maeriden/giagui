@@ -38,6 +38,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
 
 void MainWindow::setupUi()
 {
+	ui->actionOpen->setShortcutContext(Qt::WindowShortcut);
+	ui->actionOpen->setShortcuts(QKeySequence::Open);
+	ui->actionSave->setShortcutContext(Qt::WindowShortcut);
+	ui->actionSave->setShortcuts(QKeySequence::Save);
+	ui->actionSaveAs->setShortcutContext(Qt::WindowShortcut);
+	ui->actionSaveAs->setShortcuts(QKeySequence::SaveAs);
+	
 	connect(ui->actionOpen,   &QAction::triggered, this, &MainWindow::onActionOpenFile);
 	connect(ui->actionSave,   &QAction::triggered, this, &MainWindow::onActionSaveFile);
 	connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onActionSaveFileAs);
