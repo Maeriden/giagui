@@ -164,6 +164,7 @@ void MainWindow::onActionOpenEditor()
 	}
 	this->mapWindow = new MapWindow(this);
 	this->mapWindow->setAttribute(Qt::WA_DeleteOnClose, true);
+	this->mapWindow->setWindowModality(Qt::WindowModal);
 	connect(this->mapWindow, &QMainWindow::destroyed, this, &MainWindow::onDestroyedMapWindow);
 	this->mapWindow->show();
 }
