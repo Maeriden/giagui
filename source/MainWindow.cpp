@@ -54,15 +54,15 @@ void MainWindow::setupUi()
 
 void MainWindow::onActionOpenFile()
 {
-	QString caption = tr("Import data");
-	QString dir     = "";
-	QString filter  = tr("TOML (*.toml);;All Files (*)");
-	QString filePath = QFileDialog::getOpenFileName(this, caption, dir, filter);
+	QString caption = trUtf8("Import data");
+	QString cwd     = QString();
+	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
+	QString filePath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
 	if(filePath.isEmpty())
 		return;
 	
 	SimulationData simulationData = {};
-	int error = importSimulation(filePath.toLocal8Bit().constData(), &simulationData);
+	int error = importSimulation(filePath.toUtf8().constData(), &simulationData);
 	if(error == 0)
 	{
 		this->exportPath = filePath;
@@ -84,27 +84,31 @@ void MainWindow::onActionSaveFile()
 		return;
 	}
 	
-	int error = exportSimulation(this->exportPath.toLocal8Bit().constData(), this->simulationData);
+	int error = exportSimulation(this->exportPath.toUtf8().constData(), this->simulationData);
+	if(error == 0)
+	{
+		setWindowModified(false);
+	}
 	if(error == 1)
 	{
-		QMessageBox::information(this, tr("Error"), tr("Unable to save file"));
+		QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to save file"));
 	}
 	else if(error == 2)
 	{
-		QMessageBox::information(this, tr("Error"), tr("I/O error while writing data"));
+		QMessageBox::information(this, trUtf8("Error"), trUtf8("I/O error while writing data"));
 	}
 }
 
 
 void MainWindow::onActionSaveFileAs()
 {
-	QString caption = tr("Export data");
-	QString cwd     = "";
-	QString filter  = tr("TOML (*.toml);;All Files (*)");
+	QString caption = trUtf8("Export data");
+	QString cwd     = QString();
+	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
 	// NOTE: using QFileDialog::getSaveFileName() does not automatically append the extension
 	QFileDialog saveDialog(this, caption, cwd, filter);
 	saveDialog.setAcceptMode(QFileDialog::AcceptSave);
-	saveDialog.setDefaultSuffix("toml");
+	saveDialog.setDefaultSuffix(QString::fromUtf8("toml"));
 	int result = saveDialog.exec();
 	if(result != QDialog::Accepted)
 		return;
