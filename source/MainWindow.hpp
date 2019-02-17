@@ -21,8 +21,6 @@ class MainWindow : public QMainWindow
 {
 Q_OBJECT
 	MapWindow*      mapWindow;
-	SimulationData* simulationData;
-	QString         exportPath;
 	
 public:
 	explicit MainWindow(QWidget* parent = nullptr);
@@ -47,10 +45,16 @@ protected:
 #endif // ENABLE_BUTTONS_MESH_IO
 	
 	void onDestroyedMapWindow(QObject* widget);
+
+protected:
+	QString textMeshPower;
+	QString textMeshOutput;
+	QString textMeshInnerValue;
+	QString textMeshOuterValue;
+	QString textMeshOuterInput;
 	
 private:
 	void setupUi();
-	
 	
 private:
 	Ui::MainWindow* ui;

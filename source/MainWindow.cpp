@@ -4,9 +4,6 @@
 #include <QMessageBox>
 
 
-SimulationData globalSimulationData;
-
-
 int exportSimulation(const char* filePath, SimulationData* data);
 int importSimulation(const char* filePath, SimulationData* data);
 
@@ -27,8 +24,6 @@ public:
 
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
-	mapWindow(nullptr),
-	simulationData(&globalSimulationData),
 	ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
@@ -94,12 +89,13 @@ void MainWindow::onActionOpenFile()
 	QString caption = trUtf8("Import data");
 	QString cwd     = QString();
 	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
-	QString filePath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
-	if(filePath.isEmpty())
+	QString dialogPath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
+	if(dialogPath.isEmpty())
 		return;
 	
-	SimulationData simulationData = {};
-	int error = importSimulation(filePath.toUtf8().constData(), &simulationData);
+	const char* filePath = dialogPath.toUtf8().constData();
+	SimulationData simulationData;
+	int error = importSimulation(filePath, &simulationData);
 	if(error == 0)
 	{
 		// NOTE: Setting text will raise signals, and handlers will copy values into actual simulationData
@@ -109,22 +105,38 @@ void MainWindow::onActionOpenFile()
 		ui->editOuterValue->setText(QString::number(simulationData.outerValue));
 		ui->editOuterInput->setText(QString::fromStdString(simulationData.outerInput));
 		
-		this->exportPath = filePath;
-		setWindowFilePath(this->exportPath);
+		setWindowFilePath(dialogPath);
 		setWindowModified(false);
+	}
+	else if(error == 1)
+	{
+		QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to open file"));
+	}
+	else if(error == 2)
+	{
+		QMessageBox::information(this, trUtf8("Error"), trUtf8("I/O error while reading data"));
 	}
 }
 
 
 void MainWindow::onActionSaveFile()
 {
-	if(this->exportPath.isEmpty())
+	if(windowFilePath().isEmpty())
 	{
 		this->onActionSaveFileAs();
 		return;
 	}
 	
-	int error = exportSimulation(this->exportPath.toUtf8().constData(), this->simulationData);
+	const char* filePath = windowFilePath().toUtf8().constData();
+	SimulationData simulationData = {
+		.power      = ui->editPower->text().toDouble(),
+		.output     = ui->editOutput->text().toStdString(),
+		.innerValue = ui->editInnerValue->text().toDouble(),
+		.outerValue = ui->editOuterValue->text().toDouble(),
+		.outerInput = ui->editOuterInput->text().toStdString(),
+	};
+	
+	int error = exportSimulation(filePath, &simulationData);
 	if(error == 0)
 	{
 		setWindowModified(false);
@@ -152,10 +164,9 @@ void MainWindow::onActionSaveFileAs()
 	int result = saveDialog.exec();
 	if(result != QDialog::Accepted)
 		return;
-	QString filePath = saveDialog.selectedFiles().first();
+	QString dialogPath = saveDialog.selectedFiles().first();
 	
-	this->exportPath = filePath;
-	setWindowFilePath(this->exportPath);
+	setWindowFilePath(dialogPath);
 	this->onActionSaveFile();
 }
 
@@ -178,11 +189,11 @@ void MainWindow::onActionOpenEditor()
 void MainWindow::onEditingFinishedMeshPower()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	double value = lineEdit->text().toDouble();
-	if(this->simulationData->power != value)
+	if(this->textMeshPower != lineEdit->text())
 	{
-		this->simulationData->power = value;
-		setWindowModified(true);
+		this->textMeshPower = lineEdit->text();
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 	}
 }
 
@@ -190,10 +201,11 @@ void MainWindow::onEditingFinishedMeshPower()
 void MainWindow::onEditingFinishedMeshOutput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(QString::fromStdString(this->simulationData->output) != lineEdit->text())
+	if(this->textMeshOutput != lineEdit->text())
 	{
-		this->simulationData->output = lineEdit->text().toStdString();
-		setWindowModified(true);
+		this->textMeshOutput = lineEdit->text();
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 	}
 }
 
@@ -201,11 +213,11 @@ void MainWindow::onEditingFinishedMeshOutput()
 void MainWindow::onEditingFinishedMeshInnerValue()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	double value = lineEdit->text().toDouble();
-	if(this->simulationData->innerValue != value)
+	if(this->textMeshInnerValue != lineEdit->text())
 	{
-		this->simulationData->innerValue = value;
-		setWindowModified(true);
+		this->textMeshInnerValue = lineEdit->text();
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 	}
 }
 
@@ -213,11 +225,11 @@ void MainWindow::onEditingFinishedMeshInnerValue()
 void MainWindow::onEditingFinishedMeshOuterValue()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	double value = lineEdit->text().toDouble();
-	if(this->simulationData->outerValue != value)
+	if(this->textMeshOuterValue != lineEdit->text())
 	{
-		this->simulationData->outerValue = value;
-		setWindowModified(true);
+		this->textMeshOuterValue = lineEdit->text();
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 	}
 }
 
@@ -225,10 +237,11 @@ void MainWindow::onEditingFinishedMeshOuterValue()
 void MainWindow::onEditingFinishedMeshOuterInput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(QString::fromStdString(this->simulationData->outerInput) != lineEdit->text())
+	if(this->textMeshOuterInput != lineEdit->text())
 	{
-		this->simulationData->outerInput = lineEdit->text().toStdString();
-		setWindowModified(true);
+		this->textMeshOuterInput = lineEdit->text();
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 	}
 }
 
