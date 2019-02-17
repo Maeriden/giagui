@@ -47,11 +47,11 @@ void MainWindow::setupUi()
 	ui->editInnerValue->setValidator(new NumberValidator(3));
 	ui->editOuterValue->setValidator(new NumberValidator(3));
 	
-	connect(ui->editPower,      &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedPower);
-	connect(ui->editOutput,     &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedOutput);
-	connect(ui->editInnerValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedInnerValue);
-	connect(ui->editOuterValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedOuterValue);
-	connect(ui->editOuterInput, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedOuterInput);
+	connect(ui->editPower,      &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshPower);
+	connect(ui->editOutput,     &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOutput);
+	connect(ui->editInnerValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshInnerValue);
+	connect(ui->editOuterValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOuterValue);
+	connect(ui->editOuterInput, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOuterInput);
 }
 
 
@@ -76,6 +76,8 @@ void MainWindow::onActionOpenFile()
 		ui->editOuterInput->setText(QString::fromStdString(simulationData.outerInput));
 		
 		this->exportPath = filePath;
+		setWindowFilePath(this->exportPath);
+		setWindowModified(false);
 	}
 }
 
@@ -119,7 +121,7 @@ void MainWindow::onActionSaveFileAs()
 	QString filePath = saveDialog.selectedFiles().first();
 	
 	this->exportPath = filePath;
-	this->setWindowTitle(tr("GIA gui - %1").arg(this->exportPath));
+	setWindowFilePath(this->exportPath);
 	this->onActionSaveFile();
 }
 
@@ -138,43 +140,60 @@ void MainWindow::onActionOpenEditor()
 }
 
 
-void MainWindow::onEditingFinishedPower()
+void MainWindow::onEditingFinishedMeshPower()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	this->simulationData->power = lineEdit->text().toDouble();
+	double value = lineEdit->text().toDouble();
+	if(this->simulationData->power != value)
+	{
+		this->simulationData->power = value;
+		setWindowModified(true);
+	}
 }
 
 
-void MainWindow::onEditingFinishedOutput()
+void MainWindow::onEditingFinishedMeshOutput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
 	if(QString::fromStdString(this->simulationData->output) != lineEdit->text())
 	{
 		this->simulationData->output = lineEdit->text().toStdString();
+		setWindowModified(true);
 	}
 }
 
 
-void MainWindow::onEditingFinishedInnerValue()
+void MainWindow::onEditingFinishedMeshInnerValue()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	this->simulationData->innerValue = lineEdit->text().toDouble();
+	double value = lineEdit->text().toDouble();
+	if(this->simulationData->innerValue != value)
+	{
+		this->simulationData->innerValue = value;
+		setWindowModified(true);
+	}
 }
 
 
-void MainWindow::onEditingFinishedOuterValue()
+void MainWindow::onEditingFinishedMeshOuterValue()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	this->simulationData->outerValue = lineEdit->text().toDouble();
+	double value = lineEdit->text().toDouble();
+	if(this->simulationData->outerValue != value)
+	{
+		this->simulationData->outerValue = value;
+		setWindowModified(true);
+	}
 }
 
 
-void MainWindow::onEditingFinishedOuterInput()
+void MainWindow::onEditingFinishedMeshOuterInput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
 	if(QString::fromStdString(this->simulationData->outerInput) != lineEdit->text())
 	{
 		this->simulationData->outerInput = lineEdit->text().toStdString();
+		setWindowModified(true);
 	}
 }
 

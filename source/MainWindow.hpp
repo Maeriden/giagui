@@ -34,11 +34,11 @@ protected:
 	void onActionSaveFileAs();
 	void onActionOpenEditor();
 	
-	void onEditingFinishedPower();
-	void onEditingFinishedOutput();
-	void onEditingFinishedInnerValue();
-	void onEditingFinishedOuterValue();
-	void onEditingFinishedOuterInput();
+	void onEditingFinishedMeshPower();
+	void onEditingFinishedMeshOutput();
+	void onEditingFinishedMeshInnerValue();
+	void onEditingFinishedMeshOuterValue();
+	void onEditingFinishedMeshOuterInput();
 	
 	void onDestroyedMapWindow(QObject* widget);
 	
