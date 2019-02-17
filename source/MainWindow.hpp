@@ -29,6 +29,8 @@ public:
 	
 	
 protected:
+	void closeEvent(QCloseEvent* event) override;
+	
 	void onActionOpenFile();
 	void onActionSaveFile();
 	void onActionSaveFileAs();

@@ -62,6 +62,28 @@ void MainWindow::setupUi()
 }
 
 
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+	bool confirmed = !isWindowModified();
+	if(!confirmed)
+	{
+		QString title    = QString();
+		QString question = trUtf8("There are unsaved changes. Close anyway?");
+		int reply = QMessageBox::question(this, title, question);
+		confirmed = reply == QMessageBox::Yes;
+	}
+	
+	if(confirmed)
+	{
+		event->accept();
+	}
+	else
+	{
+		event->ignore();
+	}
+}
+
+
 void MainWindow::onActionOpenFile()
 {
 	QString caption = trUtf8("Import data");
