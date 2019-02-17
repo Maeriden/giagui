@@ -20,7 +20,7 @@ class MapWindow;
 class MainWindow : public QMainWindow
 {
 Q_OBJECT
-	MapWindow*      mapWindow;
+	MapWindow* mapWindow = nullptr;
 	
 public:
 	explicit MainWindow(QWidget* parent = nullptr);
