@@ -27,7 +27,6 @@ Q_OBJECT
 public:
 	explicit MainWindow(QWidget* parent = nullptr);
 	
-	
 protected:
 	void closeEvent(QCloseEvent* event) override;
 	
@@ -41,6 +40,11 @@ protected:
 	void onEditingFinishedMeshInnerValue();
 	void onEditingFinishedMeshOuterValue();
 	void onEditingFinishedMeshOuterInput();
+
+#if ENABLE_BUTTONS_MESH_IO
+	void onClickedMeshOutput(bool);
+	void onClickedMeshOuterInput(bool);
+#endif // ENABLE_BUTTONS_MESH_IO
 	
 	void onDestroyedMapWindow(QObject* widget);
 	
