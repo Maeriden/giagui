@@ -73,7 +73,6 @@ void drawBoundaryEdges(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfa
 }
 
 
-#define ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES 1
 void drawBoundaryPolar(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSize)
 {
 	// All points are either above or below the equator, so check any one point
@@ -220,7 +219,7 @@ void drawBoundary(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSiz
 			painter->setPen(QPen(QColor(0, 0, 0, 255), 1));
 			painter->setBrush(QBrush(QColor(0, 0, 0, 255), Qt::BrushStyle::SolidPattern));
 			painter->drawText(points[i], QString::number(i));
-	}
+		}
 #endif
 	}
 	else if(crossPointsCount & 1)

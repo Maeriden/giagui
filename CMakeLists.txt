@@ -17,6 +17,11 @@ if(ENABLE_DRAW_EDIT_MODE_SELECTION)
     add_compile_definitions(ENABLE_DRAW_EDIT_MODE_SELECTION=1)
 endif()
 
+option(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES "Draw points on the vertices of the currently selected polygon" OFF)
+if(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES)
+    add_compile_definitions(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES=1)
+endif()
+
 add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x051200) # We don't want old APIs
 add_compile_definitions(QT_NO_CAST_FROM_ASCII) # Disable ascii strings in qt API
 add_compile_definitions(QT_NO_CAST_TO_ASCII)   # Disable ascii strings in qt API
