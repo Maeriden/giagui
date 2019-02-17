@@ -4,6 +4,9 @@
 #include <QMessageBox>
 
 
+SimulationData globalSimulationData;
+
+
 int exportSimulation(const char* filePath, SimulationData* data);
 int importSimulation(const char* filePath, SimulationData* data);
 
@@ -25,7 +28,7 @@ public:
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
 	mapWindow(nullptr),
-	simulationData(new SimulationData{}),
+	simulationData(&globalSimulationData),
 	ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
@@ -65,13 +68,14 @@ void MainWindow::onActionOpenFile()
 	int error = importSimulation(filePath.toUtf8().constData(), &simulationData);
 	if(error == 0)
 	{
-		this->exportPath = filePath;
-		
+		// NOTE: Setting text will raise signals, and handlers will copy values into actual simulationData
 		ui->editPower->setText(QString::number(simulationData.power));
-		ui->editOutput->setText(simulationData.output);
+		ui->editOutput->setText(QString::fromStdString(simulationData.output));
 		ui->editInnerValue->setText(QString::number(simulationData.innerValue));
 		ui->editOuterValue->setText(QString::number(simulationData.outerValue));
-		ui->editOuterInput->setText(simulationData.outerInput);
+		ui->editOuterInput->setText(QString::fromStdString(simulationData.outerInput));
+		
+		this->exportPath = filePath;
 	}
 }
 
@@ -144,7 +148,10 @@ void MainWindow::onEditingFinishedPower()
 void MainWindow::onEditingFinishedOutput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	this->simulationData->output = lineEdit->text().toLocal8Bit().constData();
+	if(QString::fromStdString(this->simulationData->output) != lineEdit->text())
+	{
+		this->simulationData->output = lineEdit->text().toStdString();
+	}
 }
 
 
@@ -165,7 +172,10 @@ void MainWindow::onEditingFinishedOuterValue()
 void MainWindow::onEditingFinishedOuterInput()
 {
 	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	this->simulationData->outerInput = lineEdit->text().toLocal8Bit().constData();
+	if(QString::fromStdString(this->simulationData->outerInput) != lineEdit->text())
+	{
+		this->simulationData->outerInput = lineEdit->text().toStdString();
+	}
 }
 
 
@@ -185,11 +195,11 @@ int importSimulation(const char* filePath, SimulationData* data)
 	try
 	{
 		std::shared_ptr<cpptoml::table> root = cpptoml::parse_file(filePath);
-		data->power  = root->get_qualified_as<double>("mesh.power").value_or(0.0);
-		data->output = root->get_qualified_as<std::string>("mesh.output").value_or("").c_str();
+		data->power      = root->get_qualified_as<double>("mesh.power").value_or(0.0);
+		data->output     = root->get_qualified_as<std::string>("mesh.output").value_or("");
 		data->innerValue = root->get_qualified_as<double>("mesh.inner.value").value_or(0.0);
 		data->outerValue = root->get_qualified_as<double>("mesh.outer.value").value_or(0.0);
-		data->outerInput = root->get_qualified_as<std::string>("mesh.outer.input").value_or("").c_str();
+		data->outerInput = root->get_qualified_as<std::string>("mesh.outer.input").value_or("");
 	}
 	catch(cpptoml::parse_exception& ex)
 	{

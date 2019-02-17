@@ -8,10 +8,10 @@
 struct SimulationData
 {
 	double      power;
-	const char* output;
+	std::string output;
 	double      innerValue;
 	double      outerValue;
-	const char* outerInput;
+	std::string outerInput;
 };
 
 
