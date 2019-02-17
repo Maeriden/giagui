@@ -209,6 +209,7 @@ uint64_t h3MaxChildrenCount(int parentRes, int childRes)
 inline
 bool edgeCrossesAntimeridian(double a_lon, double b_lon)
 {
+	// Edge crosses antimeridian if its extremes are more than half a globe away
 	if(std::abs(a_lon - b_lon) > PI)
 		return true;
 	return false;
@@ -218,10 +219,8 @@ bool edgeCrossesAntimeridian(double a_lon, double b_lon)
 inline
 bool polyCrossesAntimeridian(GeoBoundary* boundary)
 {
-	// Polygon crosses antimeridian if any pair of points have latitudes
-	// of opposite sign and they are more than half a globe away
-	for(int i = 1; i < boundary->numVerts; ++i)
-		if(edgeCrossesAntimeridian(boundary->verts[0].lon, boundary->verts[i].lon))
+	for(int i = 0; i < boundary->numVerts; ++i)
+		if(edgeCrossesAntimeridian(boundary->verts[i].lon, boundary->verts[(i+1)%boundary->numVerts].lon))
 			return true;
 	return false;
 }
@@ -230,8 +229,6 @@ bool polyCrossesAntimeridian(GeoBoundary* boundary)
 inline
 int countCrossingPoints(GeoBoundary* boundary)
 {
-	// Polygon crosses antimeridian if any pair of points have latitudes
-	// of opposite sign and they are more than half a globe away
 	int result = 0;
 	for(int i = 0; i < boundary->numVerts; ++i)
 		if(edgeCrossesAntimeridian(boundary->verts[i].lon, boundary->verts[(i+1)%boundary->numVerts].lon))
