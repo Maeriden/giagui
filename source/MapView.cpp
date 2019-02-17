@@ -327,6 +327,7 @@ void MapView::mouseMoveEvent(QMouseEvent* event)
 		event->accept();
 		this->vsMouseMovePos = event->pos();
 		
+		// Polyfill issue if longitude > 180° https://github.com/uber/h3-js/issues/24
 		QRectF ssRect = QRectF(mapToScene(this->vsMouseLeftDownPos), mapToScene(this->vsMouseMovePos));
 		if(ssRect.width() < -sceneRect().width() * POLYFILL_WIDTH_FACTOR)
 			ssRect.setWidth(-sceneRect().width() * POLYFILL_WIDTH_FACTOR);
