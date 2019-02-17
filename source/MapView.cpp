@@ -352,6 +352,7 @@ void MapView::mouseReleaseEvent(QMouseEvent* event)
 		
 		QRectF area = mapToScene(this->rubberband->geometry()).boundingRect();
 		delete[] this->h3State->polyfillIndices;
+		this->h3State->polyfillIndices = nullptr;
 		this->h3State->polyfillIndicesCount = 0;
 		
 		uint64_t polyfillIndicesCount = polyfillAreaCount(area, sceneRect().size(), this->h3State->resolution);
