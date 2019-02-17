@@ -113,8 +113,10 @@
  </widget>
  <tabstops>
   <tabstop>editPower</tabstop>
+  <tabstop>editOutput</tabstop>
   <tabstop>editInnerValue</tabstop>
   <tabstop>editOuterValue</tabstop>
+  <tabstop>editOuterInput</tabstop>
  </tabstops>
  <resources/>
  <connections/>
