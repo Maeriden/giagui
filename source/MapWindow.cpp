@@ -463,7 +463,8 @@ void MapWindow::onCellChangedWater()
 			else
 				it->second.water = DOUBLE_NAN;
 			
-			setWindowModified(true);
+			if(!windowFilePath().isEmpty())
+				setWindowModified(true);
 			this->mapView->scene()->invalidate();
 		}
 		return;
@@ -486,7 +487,8 @@ void MapWindow::onCellChangedWater()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		setWindowModified(true);
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editWater->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -510,7 +512,8 @@ void MapWindow::onCellChangedIce()
 			else
 				it->second.ice = DOUBLE_NAN;
 			
-			setWindowModified(true);
+			if(!windowFilePath().isEmpty())
+				setWindowModified(true);
 			this->mapView->scene()->invalidate();
 		}
 		return;
@@ -532,7 +535,9 @@ void MapWindow::onCellChangedIce()
 			item.ice = value;
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
-		setWindowModified(true);
+		
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editIce->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -556,7 +561,8 @@ void MapWindow::onCellChangedSediment()
 			else
 				it->second.sediment = DOUBLE_NAN;
 			
-			setWindowModified(true);
+			if(!windowFilePath().isEmpty())
+				setWindowModified(true);
 			this->mapView->scene()->invalidate();
 		}
 		return;
@@ -579,7 +585,8 @@ void MapWindow::onCellChangedSediment()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		setWindowModified(true);
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editSediment->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -603,7 +610,8 @@ void MapWindow::onCellChangedDensity()
 			else
 				it->second.density = DOUBLE_NAN;
 			
-			setWindowModified(true);
+			if(!windowFilePath().isEmpty())
+				setWindowModified(true);
 			this->mapView->scene()->invalidate();
 		}
 		return;
@@ -626,7 +634,8 @@ void MapWindow::onCellChangedDensity()
 			this->h3State->cellsData[this->h3State->activeIndex] = item;
 		}
 		
-		setWindowModified(true);
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 		this->mapView->scene()->invalidate();
 		// Reset text to actual stored value (in case of conversion weirdness)
 		this->editDensity->setText(QString::number(value, 'f', DECIMAL_DIGITS));
@@ -670,7 +679,8 @@ void MapWindow::onResolutionChangedDialogFinished(int dialogResult)
 		this->setAllLineEditEnabled(false);
 		this->clearAllLineEditNoSignal();
 		
-		setWindowModified(true);
+		if(!windowFilePath().isEmpty())
+			setWindowModified(true);
 		
 		this->mapView->scene()->invalidate();
 	}
