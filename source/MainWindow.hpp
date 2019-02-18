@@ -33,11 +33,11 @@ protected:
 	void onActionSaveFileAs();
 	void onActionOpenEditor();
 	
-	void onEditingFinishedMeshPower();
-	void onEditingFinishedMeshOutput();
-	void onEditingFinishedMeshInnerValue();
-	void onEditingFinishedMeshOuterValue();
-	void onEditingFinishedMeshOuterInput();
+	void onTextEditedMeshPower(const QString& text);
+	void onTextEditedMeshOutput(const QString& text);
+	void onTextEditedMeshInnerValue(const QString& text);
+	void onTextEditedMeshOuterValue(const QString& text);
+	void onTextEditedMeshOuterInput(const QString& text);
 
 #if ENABLE_BUTTONS_MESH_IO
 	void onClickedMeshOutput(bool);

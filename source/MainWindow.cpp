@@ -49,11 +49,11 @@ void MainWindow::setupUi()
 	ui->editInnerValue->setValidator(new NumberValidator(3));
 	ui->editOuterValue->setValidator(new NumberValidator(3));
 	
-	connect(ui->editPower,      &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshPower);
-	connect(ui->editOutput,     &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOutput);
-	connect(ui->editInnerValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshInnerValue);
-	connect(ui->editOuterValue, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOuterValue);
-	connect(ui->editOuterInput, &QLineEdit::editingFinished, this, &MainWindow::onEditingFinishedMeshOuterInput);
+	connect(ui->editPower,      &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshPower);
+	connect(ui->editOutput,     &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOutput);
+	connect(ui->editInnerValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshInnerValue);
+	connect(ui->editOuterValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterValue);
+	connect(ui->editOuterInput, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterInput);
 	
 #if ENABLE_BUTTONS_MESH_IO
 	connect(ui->buttonOutput,     &QToolButton::clicked, this, &MainWindow::onClickedMeshOutput);
@@ -186,63 +186,38 @@ void MainWindow::onActionOpenEditor()
 }
 
 
-void MainWindow::onEditingFinishedMeshPower()
+void MainWindow::onTextEditedMeshPower(const QString& text)
 {
-	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(this->textMeshPower != lineEdit->text())
-	{
-		this->textMeshPower = lineEdit->text();
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-	}
+	if(!windowFilePath().isEmpty())
+		setWindowModified(true);
 }
 
 
-void MainWindow::onEditingFinishedMeshOutput()
+void MainWindow::onTextEditedMeshOutput(const QString& text)
 {
-	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(this->textMeshOutput != lineEdit->text())
-	{
-		this->textMeshOutput = lineEdit->text();
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-	}
+	if(!windowFilePath().isEmpty())
+		setWindowModified(true);
 }
 
 
-void MainWindow::onEditingFinishedMeshInnerValue()
+void MainWindow::onTextEditedMeshInnerValue(const QString& text)
 {
-	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(this->textMeshInnerValue != lineEdit->text())
-	{
-		this->textMeshInnerValue = lineEdit->text();
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-	}
+	if(!windowFilePath().isEmpty())
+		setWindowModified(true);
 }
 
 
-void MainWindow::onEditingFinishedMeshOuterValue()
+void MainWindow::onTextEditedMeshOuterValue(const QString& text)
 {
-	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(this->textMeshOuterValue != lineEdit->text())
-	{
-		this->textMeshOuterValue = lineEdit->text();
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-	}
+	if(!windowFilePath().isEmpty())
+		setWindowModified(true);
 }
 
 
-void MainWindow::onEditingFinishedMeshOuterInput()
+void MainWindow::onTextEditedMeshOuterInput(const QString& text)
 {
-	QLineEdit* lineEdit = static_cast<QLineEdit*>(sender());
-	if(this->textMeshOuterInput != lineEdit->text())
-	{
-		this->textMeshOuterInput = lineEdit->text();
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-	}
+	if(!windowFilePath().isEmpty())
+		setWindowModified(true);
 }
 
 
