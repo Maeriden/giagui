@@ -178,9 +178,9 @@ void MainWindow::onActionOpenEditor()
 		assert(this->mapWindow->isVisible());
 		return;
 	}
-	this->mapWindow = new MapWindow(this);
+	this->mapWindow = new MapWindow();
 	this->mapWindow->setAttribute(Qt::WA_DeleteOnClose, true);
-	this->mapWindow->setWindowModality(Qt::WindowModal);
+	this->mapWindow->setWindowModality(Qt::ApplicationModal);
 	connect(this->mapWindow, &QMainWindow::destroyed, this, &MainWindow::onDestroyedMapWindow);
 	this->mapWindow->show();
 }
