@@ -34,7 +34,6 @@ public:
 public:
 	H3State* h3State;
 	MapTool  mapTool;
-	QString  exportPath;
 	
 public:
 	explicit MapWindow(QWidget* parent = nullptr);

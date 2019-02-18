@@ -352,8 +352,7 @@ void MapWindow::onActionOpenFile()
 			
 			this->mapView->scene()->invalidate();
 			
-			this->exportPath = filePath;
-			setWindowFilePath(this->exportPath);
+			setWindowFilePath(filePath);
 			setWindowModified(false);
 		}
 		if(error == 1)
@@ -370,16 +369,15 @@ void MapWindow::onActionOpenFile()
 
 void MapWindow::onActionSaveFile()
 {
-	if(this->exportPath.isEmpty())
+	if(windowFilePath().isEmpty())
 	{
 		this->onActionSaveFileAs();
 		return;
 	}
 	
-	int error = exportFile(this->exportPath.toUtf8().constData(), this->h3State->resolution, this->h3State->cellsData);
+	int error = exportFile(windowFilePath().toUtf8().constData(), this->h3State->resolution, this->h3State->cellsData);
 	if(error == 0)
 	{
-		setWindowFilePath(this->exportPath);
 		setWindowModified(false);
 	}
 	if(error == 1)
@@ -407,7 +405,7 @@ void MapWindow::onActionSaveFileAs()
 		return;
 	QString filePath = saveDialog.selectedFiles().first();
 	
-	this->exportPath = filePath;
+	setWindowFilePath(filePath);
 	this->onActionSaveFile();
 }
 
