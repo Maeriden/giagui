@@ -32,8 +32,8 @@ public:
 	static constexpr int DECIMAL_DIGITS = 6;
 
 public:
-	H3State* h3State;
-	MapTool  mapTool;
+	H3State* h3State = nullptr;
+	MapTool  mapTool = MapTool::Rect;
 	
 public:
 	explicit MapWindow(QWidget* parent = nullptr);

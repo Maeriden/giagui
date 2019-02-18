@@ -7,6 +7,7 @@
 #include <QtSvg/QGraphicsSvgItem>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QMenuBar>
 
 
 #include <QSpinBox>
@@ -50,9 +51,7 @@ public:
 MapWindow::MapWindow(QWidget *parent) : QMainWindow(parent),
 	h3State(&globalH3State)
 {
-	this->h3State->resolution = 0;
-	this->h3State->activeIndex = H3_INVALID_INDEX;
-	this->mapTool = MapTool::Rect;
+	H3State_reset(this->h3State, 0);
 	
 	this->setupUi();
 	this->setupToolbar();
@@ -77,13 +76,15 @@ void MapWindow::setupUi()
 	if(objectName().isEmpty())
 		setObjectName(QString::fromUtf8("MapWindow"));
 	resize(1000, 750);
+	
 	centralWidget = new QWidget(this);
 	centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
+	
 	gridLayout = new QGridLayout(centralWidget);
-	gridLayout->setSpacing(0);
-	gridLayout->setContentsMargins(11, 11, 11, 11);
 	gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+	gridLayout->setSpacing(0);
 	gridLayout->setContentsMargins(0, 0, 0, 0);
+	
 	mapView = new MapView(centralWidget);
 	mapView->setObjectName(QString::fromUtf8("mapView"));
 	QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -98,12 +99,53 @@ void MapWindow::setupUi()
 	gridLayout->addWidget(mapView, 0, 0, 1, 1);
 	
 	setCentralWidget(centralWidget);
+	
+	QMenuBar* menubar = new QMenuBar(this);
+	menubar->setObjectName(QString::fromUtf8("menuBar"));
+	menubar->setGeometry(QRect(0, 0, 1000, 20));
+	setMenuBar(menubar);
+	{
+		QMenu* menuFile = new QMenu(menubar);
+		menuFile->setObjectName(QString::fromUtf8("menuFile"));
+		menuFile->setTitle(trUtf8("File"));
+		
+		QAction* actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), trUtf8("Open..."));
+		actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
+		actionOpen->setStatusTip(trUtf8("Open"));
+		connect(actionOpen, &QAction::triggered, this, &MapWindow::onActionOpenFile);
+		menuFile->addAction(actionOpen);
+		
+		QAction* actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), trUtf8("Save"));
+		actionSave->setShortcuts(QKeySequence::StandardKey::Save);
+		actionSave->setStatusTip(trUtf8("Save"));
+		connect(actionSave, &QAction::triggered, this, &MapWindow::onActionSaveFile);
+		menuFile->addAction(actionSave);
+		
+		QAction* actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), trUtf8("Save As..."));
+		actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
+		actionSaveAs->setStatusTip(trUtf8("Save as"));
+		connect(actionSaveAs, &QAction::triggered, this, &MapWindow::onActionSaveFileAs);
+		menuFile->addAction(actionSaveAs);
+		
+		menuFile->addSeparator();
+		
+		QAction* actionClose = new QAction(QIcon::fromTheme(QString::fromUtf8("window-close")), trUtf8("Close"));
+		actionClose->setShortcuts(QKeySequence::StandardKey::Close);
+		actionClose->setStatusTip(trUtf8("Close window"));
+		connect(actionClose, &QAction::triggered, this, &MapWindow::close);
+		menuFile->addAction(actionClose);
+		
+		menubar->addAction(menuFile->menuAction());
+	}
+	
 	mainToolBar = new QToolBar(this);
 	mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
-	mainToolBar->setEnabled(true);
+	mainToolBar->setWindowTitle(trUtf8("Toolbar"));
 	mainToolBar->setMovable(false);
 	mainToolBar->setAllowedAreas(Qt::TopToolBarArea);
+	mainToolBar->setIconSize(QSize(16, 16));
 	addToolBar(Qt::TopToolBarArea, mainToolBar);
+	
 	statusBar = new QStatusBar(this);
 	statusBar->setObjectName(QString::fromUtf8("statusBar"));
 	statusBar->setSizeGripEnabled(true);
@@ -117,27 +159,6 @@ void MapWindow::setupToolbar()
 {
 	QToolBar* toolbar = this->mainToolBar;
 	
-	{
-		QActionGroup* actionGroup = new QActionGroup(this);
-		
-		QAction* openAction = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), trUtf8("Open"), actionGroup);
-		openAction->setShortcuts(QKeySequence::StandardKey::Open);
-		openAction->setStatusTip(trUtf8("Open"));
-		connect(openAction, &QAction::triggered, this, &MapWindow::onActionOpenFile);
-		
-		QAction* saveAction = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), trUtf8("Save"), actionGroup);
-		saveAction->setShortcuts(QKeySequence::StandardKey::Save);
-		saveAction->setStatusTip(trUtf8("Save"));
-		connect(saveAction, &QAction::triggered, this, &MapWindow::onActionSaveFile);
-		
-		QAction* saveAsAction = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), trUtf8("Save As"), actionGroup);
-		saveAsAction->setShortcuts(QKeySequence::StandardKey::SaveAs);
-		saveAsAction->setStatusTip(trUtf8("Save as"));
-		connect(saveAsAction, &QAction::triggered, this, &MapWindow::onActionSaveFileAs);
-		
-		toolbar->addActions(actionGroup->actions());
-	}
-	toolbar->addSeparator();
 	{
 		QActionGroup* actionGroup = new QActionGroup(this);
 		
@@ -695,7 +716,7 @@ void MapWindow::onPolyfillFailed(PolyfillError error)
 {
 	if(error == PolyfillError::THRESHOLD_EXCEEDED)
 	{
-		QMessageBox::warning(this, trUtf8("Warning"), trUtf8("Polyfill area too big, Request ignored to avoid slowdown"));
+		QMessageBox::warning(this, trUtf8("Warning"), trUtf8("Polyfill area too big, Operation aborted to prevent application freezing"));
 	}
 	else
 	if(error == PolyfillError::MEMORY_ALLOCATION)
