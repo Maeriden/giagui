@@ -12,11 +12,6 @@ if(ENABLE_ASSERT)
     add_compile_definitions(ENABLE_ASSERT=1)
 endif()
 
-option(ENABLE_DRAW_SELECTION "Enable drawing the currently selected polygon in edit mode" OFF)
-if(ENABLE_DRAW_EDIT_MODE_SELECTION)
-    add_compile_definitions(ENABLE_DRAW_EDIT_MODE_SELECTION=1)
-endif()
-
 option(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES "Draw points on the vertices of the currently selected polygon" OFF)
 if(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES)
     add_compile_definitions(ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES=1)

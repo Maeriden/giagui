@@ -268,7 +268,7 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 			}
 		}
 	}
-#if ENABLE_DRAW_EDIT_MODE_SELECTION
+	
 	if(this->h3State->activeIndex != H3_INVALID_INDEX)
 	{
 		painter->setPen(QPen(QColor(255, 0, 0, 63), strokeWidth));
@@ -278,7 +278,6 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 		h3ToGeoBoundary(this->h3State->activeIndex, &geoBoundary);
 		drawBoundary(painter, &geoBoundary, this->sceneRect().size());
 	}
-#endif
 }
 
 
