@@ -1,7 +1,21 @@
 #include "MainWindow.hpp"
 #include "MapWindow.hpp"
+#include <QMenuBar>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
 #include <QFileDialog>
 #include <QMessageBox>
+
+
+struct SimulationData
+{
+	double      power;
+	std::string output;
+	double      innerValue;
+	double      outerValue;
+	std::string outerInput;
+};
 
 
 int exportSimulation(const char* filePath, SimulationData* data);
@@ -23,37 +37,130 @@ public:
 };
 
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
-	ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
-	ui->setupUi(this);
 	this->setupUi();
 }
 
 
 void MainWindow::setupUi()
 {
-	ui->actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
-	ui->actionSave->setShortcuts(QKeySequence::StandardKey::Save);
-	ui->actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
-	ui->actionQuit->setShortcuts(QKeySequence::StandardKey::Quit);
+	if (this->objectName().isEmpty())
+		this->setObjectName(QString::fromUtf8("MainWindow"));
+	this->resize(480, 180);
 	
-	connect(ui->actionOpen,   &QAction::triggered, this, &MainWindow::onActionOpenFile);
-	connect(ui->actionSave,   &QAction::triggered, this, &MainWindow::onActionSaveFile);
-	connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onActionSaveFileAs);
-	connect(ui->actionQuit,   &QAction::triggered, this, &MainWindow::close);
-	connect(ui->actionEditor, &QAction::triggered, this, &MainWindow::onActionOpenEditor);
+	this->centralwidget = new QWidget(this);
+	this->centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
+	this->setCentralWidget(this->centralwidget);
+	this->formLayout = new QFormLayout(this->centralwidget);
+	this->formLayout->setObjectName(QString::fromUtf8("formLayout"));
 	
-	ui->editPower->setValidator(new NumberValidator(3));
-	ui->editInnerValue->setValidator(new NumberValidator(3));
-	ui->editOuterValue->setValidator(new NumberValidator(3));
+	this->menubar = new QMenuBar(this);
+	this->menubar->setObjectName(QString::fromUtf8("menubar"));
+	this->menubar->setGeometry(QRect(0, 0, 480, 20));
+	this->setMenuBar(this->menubar);
 	
-	connect(ui->editPower,      &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshPower);
-	connect(ui->editOutput,     &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOutput);
-	connect(ui->editInnerValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshInnerValue);
-	connect(ui->editOuterValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterValue);
-	connect(ui->editOuterInput, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterInput);
+	this->menuFile = new QMenu(trUtf8("File"), this->menubar);
+	this->menuFile->setObjectName(QString::fromUtf8("menuFile"));
+	{
+		this->actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), trUtf8("Open..."), this);
+		this->actionOpen->setObjectName(QString::fromUtf8("actionOpen"));
+		this->actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
+		connect(this->actionOpen, &QAction::triggered, this, &MainWindow::onActionOpenFile);
+		
+		this->actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), trUtf8("Save"), this);
+		this->actionSave->setObjectName(QString::fromUtf8("actionSave"));
+		this->actionSave->setShortcuts(QKeySequence::StandardKey::Save);
+		connect(this->actionSave, &QAction::triggered, this, &MainWindow::onActionSaveFile);
+		
+		this->actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), trUtf8("Save As..."), this);
+		this->actionSaveAs->setObjectName(QString::fromUtf8("actionSaveAs"));
+		this->actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
+		connect(this->actionSaveAs, &QAction::triggered, this, &MainWindow::onActionSaveFileAs);
+		
+		this->actionQuit = new QAction(QIcon::fromTheme(QString::fromUtf8("application-exit")), trUtf8("Quit"), this);
+		this->actionQuit->setObjectName(QString::fromUtf8("actionQuit"));
+		this->actionQuit->setShortcuts(QKeySequence::StandardKey::Quit);
+		this->actionQuit->setMenuRole(QAction::QuitRole);
+		connect(this->actionQuit, &QAction::triggered, this, &MainWindow::close);
+		
+		this->menubar->addAction(this->menuFile->menuAction());
+		this->menuFile->addAction(this->actionOpen);
+		this->menuFile->addAction(this->actionSave);
+		this->menuFile->addAction(this->actionSaveAs);
+		this->menuFile->addSeparator();
+		this->menuFile->addAction(this->actionQuit);
+	}
 	
+	this->menuTools = new QMenu(trUtf8("Tools"), this->menubar);
+	this->menuTools->setObjectName(QString::fromUtf8("menuTools"));
+	{
+		this->actionEditor = new QAction(trUtf8("Open Mesh Editor..."), this);
+		this->actionEditor->setObjectName(QString::fromUtf8("actionEditor"));
+		connect(this->actionEditor, &QAction::triggered, this, &MainWindow::onActionOpenEditor);
+		
+		this->menubar->addAction(this->menuTools->menuAction());
+		this->menuTools->addAction(this->actionEditor);
+	}
+	
+	{
+		this->labelPower = new QLabel(trUtf8("Mesh Power"), this->centralwidget);
+		this->labelPower->setObjectName(QString::fromUtf8("labelPower"));
+		
+		this->editPower = new QLineEdit(this->centralwidget);
+		this->editPower->setObjectName(QString::fromUtf8("editPower"));
+		this->editPower->setValidator(new NumberValidator(3));
+		connect(this->editPower, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshPower);
+		
+		this->formLayout->setWidget(0, QFormLayout::LabelRole, labelPower);
+		this->formLayout->setWidget(0, QFormLayout::FieldRole, editPower);
+	}
+	{
+		this->labelOutput = new QLabel(trUtf8("Mesh Output"), this->centralwidget);
+		this->labelOutput->setObjectName(QString::fromUtf8("labelOutput"));
+		
+		this->editOutput = new QLineEdit(this->centralwidget);
+		this->editOutput->setObjectName(QString::fromUtf8("editOutput"));
+		connect(this->editOutput, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOutput);
+		
+		this->formLayout->setWidget(1, QFormLayout::LabelRole, labelOutput);
+		this->formLayout->setWidget(1, QFormLayout::FieldRole, editOutput);
+	}
+	{
+		this->labelInnerValue = new QLabel(trUtf8("Mesh Inner Value"), this->centralwidget);
+		this->labelInnerValue->setObjectName(QString::fromUtf8("labelInnerValue"));
+		
+		this->editInnerValue = new QLineEdit(this->centralwidget);
+		this->editInnerValue->setObjectName(QString::fromUtf8("editInnerValue"));
+		this->editInnerValue->setValidator(new NumberValidator(3));
+		connect(this->editInnerValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshInnerValue);
+		
+		this->formLayout->setWidget(2, QFormLayout::LabelRole, labelInnerValue);
+		this->formLayout->setWidget(2, QFormLayout::FieldRole, editInnerValue);
+	}
+	{
+		this->labelOuterValue = new QLabel(trUtf8("Mesh Outer Value"), this->centralwidget);
+		this->labelOuterValue->setObjectName(QString::fromUtf8("labelOuterValue"));
+		
+		this->editOuterValue = new QLineEdit(this->centralwidget);
+		this->editOuterValue->setObjectName(QString::fromUtf8("editOuterValue"));
+		this->editOuterValue->setValidator(new NumberValidator(3));
+		connect(this->editOuterValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterValue);
+		
+		this->formLayout->setWidget(3, QFormLayout::LabelRole, labelOuterValue);
+		this->formLayout->setWidget(3, QFormLayout::FieldRole, editOuterValue);
+	}
+	{
+		this->labelOuterInput = new QLabel(trUtf8("Mesh Outer Input"), this->centralwidget);
+		this->labelOuterInput->setObjectName(QString::fromUtf8("labelOuterInput"));
+		
+		this->editOuterInput = new QLineEdit(this->centralwidget);
+		this->editOuterInput->setObjectName(QString::fromUtf8("editOuterInput"));
+		connect(this->editOuterInput, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterInput);
+		
+		this->formLayout->setWidget(4, QFormLayout::LabelRole, labelOuterInput);
+		this->formLayout->setWidget(4, QFormLayout::FieldRole, editOuterInput);
+	}
 }
 
 
@@ -93,12 +200,11 @@ void MainWindow::onActionOpenFile()
 	int error = importSimulation(filePath, &simulationData);
 	if(error == 0)
 	{
-		// NOTE: Setting text will raise signals, and handlers will copy values into actual simulationData
-		ui->editPower->setText(QString::number(simulationData.power));
-		ui->editOutput->setText(QString::fromStdString(simulationData.output));
-		ui->editInnerValue->setText(QString::number(simulationData.innerValue));
-		ui->editOuterValue->setText(QString::number(simulationData.outerValue));
-		ui->editOuterInput->setText(QString::fromStdString(simulationData.outerInput));
+		this->editPower->setText(QString::number(simulationData.power));
+		this->editOutput->setText(QString::fromStdString(simulationData.output));
+		this->editInnerValue->setText(QString::number(simulationData.innerValue));
+		this->editOuterValue->setText(QString::number(simulationData.outerValue));
+		this->editOuterInput->setText(QString::fromStdString(simulationData.outerInput));
 		
 		setWindowFilePath(dialogPath);
 		setWindowModified(false);
@@ -124,11 +230,11 @@ void MainWindow::onActionSaveFile()
 	
 	const char* filePath = windowFilePath().toUtf8().constData();
 	SimulationData simulationData = {
-		.power      = ui->editPower->text().toDouble(),
-		.output     = ui->editOutput->text().toStdString(),
-		.innerValue = ui->editInnerValue->text().toDouble(),
-		.outerValue = ui->editOuterValue->text().toDouble(),
-		.outerInput = ui->editOuterInput->text().toStdString(),
+		.power      = this->editPower->text().toDouble(),
+		.output     = this->editOutput->text().toStdString(),
+		.innerValue = this->editInnerValue->text().toDouble(),
+		.outerValue = this->editOuterValue->text().toDouble(),
+		.outerInput = this->editOuterInput->text().toStdString(),
 	};
 	
 	int error = exportSimulation(filePath, &simulationData);

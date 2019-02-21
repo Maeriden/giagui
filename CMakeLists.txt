@@ -44,7 +44,7 @@ set(UI_FILES
         source/mainwindow.ui)
 
 set(RESOURCE_FILES
-        resources/resources.qrc)
+        )
 
 add_executable(${PROJECT_NAME}
         ${SOURCE_FILES}

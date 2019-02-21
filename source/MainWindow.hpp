@@ -1,21 +1,14 @@
 #ifndef GIAGUI_MAINWINDOW_HPP
 #define GIAGUI_MAINWINDOW_HPP
 
-#include "ui_mainwindow.h"
 #include <QMainWindow>
 
 
-struct SimulationData
-{
-	double      power;
-	std::string output;
-	double      innerValue;
-	double      outerValue;
-	std::string outerInput;
-};
-
-
+class QFormLayout;
+class QLabel;
+class QLineEdit;
 class MapWindow;
+
 
 class MainWindow : public QMainWindow
 {
@@ -40,19 +33,38 @@ protected:
 	void onTextEditedMeshOuterInput(const QString& text);
 	
 	void onDestroyedMapWindow(QObject* widget);
-
-protected:
-	QString textMeshPower;
-	QString textMeshOutput;
-	QString textMeshInnerValue;
-	QString textMeshOuterValue;
-	QString textMeshOuterInput;
 	
 private:
 	void setupUi();
 	
 private:
-	Ui::MainWindow* ui;
+	QWidget*     centralwidget;
+	QFormLayout* formLayout;
+	QMenuBar*    menubar;
+	
+	QMenu*       menuFile;
+	QAction*     actionOpen;
+	QAction*     actionSave;
+	QAction*     actionSaveAs;
+	QAction*     actionQuit;
+	
+	QMenu*       menuTools;
+	QAction*     actionEditor;
+	
+	QLabel*      labelPower;
+	QLineEdit*   editPower;
+	
+	QLabel*      labelOutput;
+	QLineEdit*   editOutput;
+	
+	QLabel*      labelInnerValue;
+	QLineEdit*   editInnerValue;
+	
+	QLabel*      labelOuterValue;
+	QLineEdit*   editOuterValue;
+	
+	QLabel*      labelOuterInput;
+	QLineEdit*   editOuterInput;
 };
 
 
