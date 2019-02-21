@@ -38,11 +38,6 @@ protected:
 	void onTextEditedMeshInnerValue(const QString& text);
 	void onTextEditedMeshOuterValue(const QString& text);
 	void onTextEditedMeshOuterInput(const QString& text);
-
-#if ENABLE_BUTTONS_MESH_IO
-	void onClickedMeshOutput(bool);
-	void onClickedMeshOuterInput(bool);
-#endif // ENABLE_BUTTONS_MESH_IO
 	
 	void onDestroyedMapWindow(QObject* widget);
 

@@ -54,10 +54,6 @@ void MainWindow::setupUi()
 	connect(ui->editOuterValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterValue);
 	connect(ui->editOuterInput, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterInput);
 	
-#if ENABLE_BUTTONS_MESH_IO
-	connect(ui->buttonOutput,     &QToolButton::clicked, this, &MainWindow::onClickedMeshOutput);
-	connect(ui->buttonOuterInput, &QToolButton::clicked, this, &MainWindow::onClickedMeshOuterInput);
-#endif
 }
 
 
@@ -218,32 +214,6 @@ void MainWindow::onTextEditedMeshOuterInput(const QString& text)
 	if(!windowFilePath().isEmpty())
 		setWindowModified(true);
 }
-
-
-#if ENABLE_BUTTONS_MESH_IO
-void MainWindow::onClickedMeshOutput(bool)
-{
-	QString caption = trUtf8("Select Mesh Output");
-	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
-	QString filePath = QFileDialog::getSaveFileName(this, caption, cwd, filter);
-	if(filePath.isEmpty())
-		return;
-	ui->editOutput->setText(filePath);
-}
-
-
-void MainWindow::onClickedMeshOuterInput(bool)
-{
-	QString caption = trUtf8("Select Mesh Outer Input");
-	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
-	QString filePath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
-	if(filePath.isEmpty())
-		return;
-	ui->editOuterInput->setText(filePath);
-}
-#endif // ENABLE_BUTTONS_MESH_IO
 
 
 void MainWindow::onDestroyedMapWindow(QObject* widget)
