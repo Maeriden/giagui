@@ -38,7 +38,8 @@ set(SOURCE_FILES
         source/map.hpp source/map.cpp
         source/MainWindow.cpp source/MainWindow.hpp
         source/MapWindow.cpp source/MapWindow.hpp
-        source/MapView.cpp source/MapView.hpp)
+        source/MapView.cpp source/MapView.hpp
+		source/IntSpinbox.cpp source/IntSpinbox.hpp)
 
 set(RESOURCE_FILES
         resources/resources.qrc)
