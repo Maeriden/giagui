@@ -60,25 +60,25 @@ void MainWindow::setupUi()
 	this->menubar->setGeometry(QRect(0, 0, 480, 20));
 	this->setMenuBar(this->menubar);
 	
-	this->menuFile = new QMenu(trUtf8("File"), this->menubar);
+	this->menuFile = new QMenu(tr("File"), this->menubar);
 	this->menuFile->setObjectName(QString::fromUtf8("menuFile"));
 	{
-		this->actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), trUtf8("Open..."), this);
+		this->actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), tr("Open..."), this);
 		this->actionOpen->setObjectName(QString::fromUtf8("actionOpen"));
 		this->actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
 		connect(this->actionOpen, &QAction::triggered, this, &MainWindow::onActionOpenFile);
 		
-		this->actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), trUtf8("Save"), this);
+		this->actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), tr("Save"), this);
 		this->actionSave->setObjectName(QString::fromUtf8("actionSave"));
 		this->actionSave->setShortcuts(QKeySequence::StandardKey::Save);
 		connect(this->actionSave, &QAction::triggered, this, &MainWindow::onActionSaveFile);
 		
-		this->actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), trUtf8("Save As..."), this);
+		this->actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), tr("Save As..."), this);
 		this->actionSaveAs->setObjectName(QString::fromUtf8("actionSaveAs"));
 		this->actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
 		connect(this->actionSaveAs, &QAction::triggered, this, &MainWindow::onActionSaveFileAs);
 		
-		this->actionQuit = new QAction(QIcon::fromTheme(QString::fromUtf8("application-exit")), trUtf8("Quit"), this);
+		this->actionQuit = new QAction(QIcon::fromTheme(QString::fromUtf8("application-exit")), tr("Quit"), this);
 		this->actionQuit->setObjectName(QString::fromUtf8("actionQuit"));
 		this->actionQuit->setShortcuts(QKeySequence::StandardKey::Quit);
 		this->actionQuit->setMenuRole(QAction::QuitRole);
@@ -92,10 +92,10 @@ void MainWindow::setupUi()
 		this->menuFile->addAction(this->actionQuit);
 	}
 	
-	this->menuTools = new QMenu(trUtf8("Tools"), this->menubar);
+	this->menuTools = new QMenu(tr("Tools"), this->menubar);
 	this->menuTools->setObjectName(QString::fromUtf8("menuTools"));
 	{
-		this->actionEditor = new QAction(trUtf8("Open Mesh Editor..."), this);
+		this->actionEditor = new QAction(tr("Open Mesh Editor..."), this);
 		this->actionEditor->setObjectName(QString::fromUtf8("actionEditor"));
 		connect(this->actionEditor, &QAction::triggered, this, &MainWindow::onActionOpenEditor);
 		
@@ -104,7 +104,7 @@ void MainWindow::setupUi()
 	}
 	
 	{
-		this->labelPower = new QLabel(trUtf8("Mesh Power"), this->centralwidget);
+		this->labelPower = new QLabel(tr("Mesh Power"), this->centralwidget);
 		this->labelPower->setObjectName(QString::fromUtf8("labelPower"));
 		
 		this->editPower = new QLineEdit(this->centralwidget);
@@ -116,7 +116,7 @@ void MainWindow::setupUi()
 		this->formLayout->setWidget(0, QFormLayout::FieldRole, editPower);
 	}
 	{
-		this->labelOutput = new QLabel(trUtf8("Mesh Output"), this->centralwidget);
+		this->labelOutput = new QLabel(tr("Mesh Output"), this->centralwidget);
 		this->labelOutput->setObjectName(QString::fromUtf8("labelOutput"));
 		
 		this->editOutput = new QLineEdit(this->centralwidget);
@@ -127,7 +127,7 @@ void MainWindow::setupUi()
 		this->formLayout->setWidget(1, QFormLayout::FieldRole, editOutput);
 	}
 	{
-		this->labelInnerValue = new QLabel(trUtf8("Mesh Inner Value"), this->centralwidget);
+		this->labelInnerValue = new QLabel(tr("Mesh Inner Value"), this->centralwidget);
 		this->labelInnerValue->setObjectName(QString::fromUtf8("labelInnerValue"));
 		
 		this->editInnerValue = new QLineEdit(this->centralwidget);
@@ -139,7 +139,7 @@ void MainWindow::setupUi()
 		this->formLayout->setWidget(2, QFormLayout::FieldRole, editInnerValue);
 	}
 	{
-		this->labelOuterValue = new QLabel(trUtf8("Mesh Outer Value"), this->centralwidget);
+		this->labelOuterValue = new QLabel(tr("Mesh Outer Value"), this->centralwidget);
 		this->labelOuterValue->setObjectName(QString::fromUtf8("labelOuterValue"));
 		
 		this->editOuterValue = new QLineEdit(this->centralwidget);
@@ -151,7 +151,7 @@ void MainWindow::setupUi()
 		this->formLayout->setWidget(3, QFormLayout::FieldRole, editOuterValue);
 	}
 	{
-		this->labelOuterInput = new QLabel(trUtf8("Mesh Outer Input"), this->centralwidget);
+		this->labelOuterInput = new QLabel(tr("Mesh Outer Input"), this->centralwidget);
 		this->labelOuterInput->setObjectName(QString::fromUtf8("labelOuterInput"));
 		
 		this->editOuterInput = new QLineEdit(this->centralwidget);
@@ -170,7 +170,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	if(!confirmed)
 	{
 		QString title    = QString();
-		QString question = trUtf8("There are unsaved changes. Close anyway?");
+		QString question = tr("There are unsaved changes. Close anyway?");
 		int reply = QMessageBox::question(this, title, question);
 		confirmed = reply == QMessageBox::Yes;
 	}
@@ -188,9 +188,9 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 void MainWindow::onActionOpenFile()
 {
-	QString caption = trUtf8("Import data");
+	QString caption = tr("Import data");
 	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
+	QString filter  = tr("TOML (*.toml);;All Files (*)");
 	QString dialogPath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
 	if(dialogPath.isEmpty())
 		return;
@@ -211,11 +211,11 @@ void MainWindow::onActionOpenFile()
 	}
 	else if(error == 1)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to open file"));
+		QMessageBox::information(this, tr("Error"), tr("Unable to open file"));
 	}
 	else if(error == 2)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("I/O error while reading data"));
+		QMessageBox::information(this, tr("Error"), tr("I/O error while reading data"));
 	}
 }
 
@@ -244,20 +244,20 @@ void MainWindow::onActionSaveFile()
 	}
 	if(error == 1)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to save file"));
+		QMessageBox::information(this, tr("Error"), tr("Unable to save file"));
 	}
 	else if(error == 2)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("I/O error while writing data"));
+		QMessageBox::information(this, tr("Error"), tr("I/O error while writing data"));
 	}
 }
 
 
 void MainWindow::onActionSaveFileAs()
 {
-	QString caption = trUtf8("Export data");
+	QString caption = tr("Export data");
 	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
+	QString filter  = tr("TOML (*.toml);;All Files (*)");
 	// NOTE: using QFileDialog::getSaveFileName() does not automatically append the extension
 	QFileDialog saveDialog(this, caption, cwd, filter);
 	saveDialog.setAcceptMode(QFileDialog::AcceptSave);

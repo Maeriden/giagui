@@ -107,31 +107,31 @@ void MapWindow::setupUi()
 	{
 		QMenu* menuFile = new QMenu(menubar);
 		menuFile->setObjectName(QString::fromUtf8("menuFile"));
-		menuFile->setTitle(trUtf8("File"));
+		menuFile->setTitle(tr("File"));
 		
-		QAction* actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), trUtf8("Open..."));
+		QAction* actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), tr("Open..."));
 		actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
-		actionOpen->setStatusTip(trUtf8("Open"));
+		actionOpen->setStatusTip(tr("Open"));
 		connect(actionOpen, &QAction::triggered, this, &MapWindow::onActionOpenFile);
 		menuFile->addAction(actionOpen);
 		
-		QAction* actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), trUtf8("Save"));
+		QAction* actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), tr("Save"));
 		actionSave->setShortcuts(QKeySequence::StandardKey::Save);
-		actionSave->setStatusTip(trUtf8("Save"));
+		actionSave->setStatusTip(tr("Save"));
 		connect(actionSave, &QAction::triggered, this, &MapWindow::onActionSaveFile);
 		menuFile->addAction(actionSave);
 		
-		QAction* actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), trUtf8("Save As..."));
+		QAction* actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), tr("Save As..."));
 		actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
-		actionSaveAs->setStatusTip(trUtf8("Save as"));
+		actionSaveAs->setStatusTip(tr("Save as"));
 		connect(actionSaveAs, &QAction::triggered, this, &MapWindow::onActionSaveFileAs);
 		menuFile->addAction(actionSaveAs);
 		
 		menuFile->addSeparator();
 		
-		QAction* actionClose = new QAction(QIcon::fromTheme(QString::fromUtf8("window-close")), trUtf8("Close"));
+		QAction* actionClose = new QAction(QIcon::fromTheme(QString::fromUtf8("window-close")), tr("Close"));
 		actionClose->setShortcuts(QKeySequence::StandardKey::Close);
-		actionClose->setStatusTip(trUtf8("Close window"));
+		actionClose->setStatusTip(tr("Close window"));
 		connect(actionClose, &QAction::triggered, this, &MapWindow::close);
 		menuFile->addAction(actionClose);
 		
@@ -140,7 +140,7 @@ void MapWindow::setupUi()
 	
 	mainToolBar = new QToolBar(this);
 	mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
-	mainToolBar->setWindowTitle(trUtf8("Toolbar"));
+	mainToolBar->setWindowTitle(tr("Toolbar"));
 	mainToolBar->setMovable(false);
 	mainToolBar->setAllowedAreas(Qt::TopToolBarArea);
 	mainToolBar->setIconSize(QSize(16, 16));
@@ -162,14 +162,14 @@ void MapWindow::setupToolbar()
 	{
 		QActionGroup* actionGroup = new QActionGroup(this);
 		
-		QAction* zoomOutAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-out")), trUtf8("Zoom Out"), actionGroup);
+		QAction* zoomOutAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-out")), tr("Zoom Out"), actionGroup);
 		zoomOutAction->setShortcuts(QKeySequence::StandardKey::ZoomOut);
-		zoomOutAction->setStatusTip(trUtf8("Zoom out"));
+		zoomOutAction->setStatusTip(tr("Zoom out"));
 		connect(zoomOutAction, &QAction::triggered, this, &MapWindow::onActionZoomOut);
 		
-		QAction* zoomInAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-in")), trUtf8("Zoom In"), actionGroup);
+		QAction* zoomInAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-in")), tr("Zoom In"), actionGroup);
 		zoomInAction->setShortcuts(QKeySequence::StandardKey::ZoomIn);
-		zoomInAction->setStatusTip(trUtf8("Zoom in"));
+		zoomInAction->setStatusTip(tr("Zoom in"));
 		connect(zoomInAction,  &QAction::triggered, this, &MapWindow::onActionZoomIn);
 		
 		toolbar->addActions(actionGroup->actions());
@@ -178,14 +178,14 @@ void MapWindow::setupToolbar()
 	{
 		QActionGroup* actionGroup = new QActionGroup(this);
 		
-		QAction* rectAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-rect.svg")), trUtf8("Rect Tool"), actionGroup);
-		rectAction->setStatusTip(trUtf8("Select area to polyfill"));
+		QAction* rectAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-rect.svg")), tr("Rect Tool"), actionGroup);
+		rectAction->setStatusTip(tr("Select area to polyfill"));
 		rectAction->setCheckable(true);
 		rectAction->setChecked(true);
 		connect(rectAction, &QAction::triggered, this, &MapWindow::onActionRectTool);
 		
-		QAction* editAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-edit.svg")), trUtf8("Edit Tool"), actionGroup);
-		editAction->setStatusTip(trUtf8("Edit cell values"));
+		QAction* editAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-edit.svg")), tr("Edit Tool"), actionGroup);
+		editAction->setStatusTip(tr("Edit cell values"));
 		editAction->setCheckable(true);
 		connect(editAction, &QAction::triggered, this, &MapWindow::onActionEditTool);
 		
@@ -198,7 +198,7 @@ void MapWindow::setupToolbar()
 		layout->setSpacing(6);
 		layout->setContentsMargins(5, 0, 5, 0);
 		
-		QLabel* labelW = new QLabel(trUtf8("Water"), group);
+		QLabel* labelW = new QLabel(tr("Water"), group);
 		layout->addWidget(labelW);
 		
 		this->editWater = new QLineEdit(group);
@@ -207,12 +207,12 @@ void MapWindow::setupToolbar()
 		this->editWater->setMaximumWidth(100);
 		this->editWater->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editWater->setEnabled(false);
-		this->editWater->setPlaceholderText(trUtf8("N/A"));
+		this->editWater->setPlaceholderText(tr("N/A"));
 		this->editWater->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
 		layout->addWidget(this->editWater);
 		connect(this->editWater,    &QLineEdit::editingFinished, this, &MapWindow::onCellChangedWater);
 		
-		QLabel* labelI = new QLabel(trUtf8("Ice"), group);
+		QLabel* labelI = new QLabel(tr("Ice"), group);
 		layout->addWidget(labelI);
 		
 		this->editIce = new QLineEdit(group);
@@ -221,12 +221,12 @@ void MapWindow::setupToolbar()
 		this->editIce->setMaximumWidth(100);
 		this->editIce->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editIce->setEnabled(false);
-		this->editIce->setPlaceholderText(trUtf8("N/A"));
+		this->editIce->setPlaceholderText(tr("N/A"));
 		this->editIce->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
 		layout->addWidget(this->editIce);
 		connect(this->editIce,      &QLineEdit::editingFinished, this, &MapWindow::onCellChangedIce);
 		
-		QLabel* labelS = new QLabel(trUtf8("Sediment"), group);
+		QLabel* labelS = new QLabel(tr("Sediment"), group);
 		layout->addWidget(labelS);
 		
 		this->editSediment = new QLineEdit(group);
@@ -235,12 +235,12 @@ void MapWindow::setupToolbar()
 		this->editSediment->setMaximumWidth(100);
 		this->editSediment->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editSediment->setEnabled(false);
-		this->editSediment->setPlaceholderText(trUtf8("N/A"));
+		this->editSediment->setPlaceholderText(tr("N/A"));
 		this->editSediment->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
 		layout->addWidget(this->editSediment);
 		connect(this->editSediment, &QLineEdit::editingFinished, this, &MapWindow::onCellChangedSediment);
 		
-		QLabel* labelD = new QLabel(trUtf8("Sediment density"), group);
+		QLabel* labelD = new QLabel(tr("Sediment density"), group);
 		layout->addWidget(labelD);
 		
 		this->editDensity = new QLineEdit(group);
@@ -249,7 +249,7 @@ void MapWindow::setupToolbar()
 		this->editDensity->setMaximumWidth(100);
 		this->editDensity->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 		this->editDensity->setEnabled(false);
-		this->editDensity->setPlaceholderText(trUtf8("N/A"));
+		this->editDensity->setPlaceholderText(tr("N/A"));
 		this->editDensity->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
 		layout->addWidget(this->editDensity);
 		connect(this->editDensity, &QLineEdit::editingFinished, this, &MapWindow::onCellChangedDensity);
@@ -258,7 +258,7 @@ void MapWindow::setupToolbar()
 	}
 	toolbar->addSeparator();
 	{
-		QLabel* label = new QLabel(trUtf8("Resolution"), this);
+		QLabel* label = new QLabel(tr("Resolution"), this);
 		toolbar->addWidget(label);
 		
 		this->resolutionSpinbox = new IntSpinBox(this);
@@ -319,7 +319,7 @@ void MapWindow::closeEvent(QCloseEvent* event)
 	if(!confirmed)
 	{
 		QString title    = QString();
-		QString question = trUtf8("There are unsaved changes. Close anyway?");
+		QString question = tr("There are unsaved changes. Close anyway?");
 		int reply = QMessageBox::question(this, title, question);
 		confirmed = reply == QMessageBox::Yes;
 	}
@@ -338,9 +338,9 @@ void MapWindow::closeEvent(QCloseEvent* event)
 
 void MapWindow::onActionOpenFile()
 {
-	QString caption = trUtf8("Import data");
+	QString caption = tr("Import data");
 	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
+	QString filter  = tr("TOML (*.toml);;All Files (*)");
 	QString filePath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
 	if(filePath.isEmpty())
 		return;
@@ -349,7 +349,7 @@ void MapWindow::onActionOpenFile()
 	if(!confirmed)
 	{
 		QString title    = QString();
-		QString question = trUtf8("Current data will be overwritten. Proceed?");
+		QString question = tr("Current data will be overwritten. Proceed?");
 		QMessageBox::StandardButton reply = QMessageBox::question(this, title, question, QMessageBox::Ok|QMessageBox::Cancel);
 		confirmed = reply == QMessageBox::Ok;
 	}
@@ -378,11 +378,11 @@ void MapWindow::onActionOpenFile()
 		}
 		if(error == 1)
 		{
-			QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to open file"));
+			QMessageBox::information(this, tr("Error"), tr("Unable to open file"));
 		}
 		if(error == 2)
 		{
-			QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to parse file"));
+			QMessageBox::information(this, tr("Error"), tr("Unable to parse file"));
 		}
 	}
 }
@@ -403,20 +403,20 @@ void MapWindow::onActionSaveFile()
 	}
 	if(error == 1)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("Unable to save file"));
+		QMessageBox::information(this, tr("Error"), tr("Unable to save file"));
 	}
 	else if(error == 2)
 	{
-		QMessageBox::information(this, trUtf8("Error"), trUtf8("I/O error while writing data"));
+		QMessageBox::information(this, tr("Error"), tr("I/O error while writing data"));
 	}
 }
 
 
 void MapWindow::onActionSaveFileAs()
 {
-	QString caption = trUtf8("Export data");
+	QString caption = tr("Export data");
 	QString cwd     = QString();
-	QString filter  = trUtf8("TOML (*.toml);;All Files (*)");
+	QString filter  = tr("TOML (*.toml);;All Files (*)");
 	// NOTE: using QFileDialog::getSaveFileName() does not automatically append the extension
 	QFileDialog saveDialog(this, caption, cwd, filter);
 	saveDialog.setAcceptMode(QFileDialog::AcceptSave);
@@ -670,7 +670,7 @@ void MapWindow::onResolutionChanged(int resolution)
 	if(!this->h3State->cellsData.empty())
 	{
 		QString title    = QString();
-		QString question = trUtf8("Changing resolution will reset stored data. Proceed?");
+		QString question = tr("Changing resolution will reset stored data. Proceed?");
 		QMessageBox* box = new QMessageBox(QMessageBox::Question, title, question, QMessageBox::Ok|QMessageBox::Cancel, this);
 		box->setWindowModality(Qt::WindowModal);
 		connect(box, &QMessageBox::finished, this, &MapWindow::onResolutionChangedDialogFinished);
@@ -716,12 +716,12 @@ void MapWindow::onPolyfillFailed(PolyfillError error)
 {
 	if(error == PolyfillError::THRESHOLD_EXCEEDED)
 	{
-		QMessageBox::warning(this, trUtf8("Warning"), trUtf8("Polyfill area too big, Operation aborted to prevent application freezing"));
+		QMessageBox::warning(this, tr("Warning"), tr("Polyfill area too big, Operation aborted to prevent application freezing"));
 	}
 	else
 	if(error == PolyfillError::MEMORY_ALLOCATION)
 	{
-		QMessageBox::critical(this, trUtf8("Memory allocation error"), trUtf8("Not enough memory to polyfill the selected area"));
+		QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to polyfill the selected area"));
 	}
 }
 

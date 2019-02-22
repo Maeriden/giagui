@@ -22,7 +22,7 @@
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L50
 #ifndef H3_MODE_MASK
-#define H3_MODE_MASK 0b0'1111'000'0000'0000000'000000000000000000000000000000000000000000000
+#define H3_MODE_MASK 0b0111100000000000000000000000000000000000000000000000000000000000
 #endif
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L38
@@ -32,7 +32,7 @@
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L56
 #ifndef H3_BC_MASK
-#define H3_BC_MASK 0b0'0000'000'0000'1111111'000000000000000000000000000000000000000000000
+#define H3_BC_MASK 0b0000000000001111111000000000000000000000000000000000000000000000
 #endif
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/constants.h#L79
@@ -52,7 +52,7 @@
 
 // https://github.com/uber/h3/blob/5a55394937466f6d8b50e2da62813db29f40bdd0/src/h3lib/include/h3Index.h#L80
 #ifndef H3_INIT // H3 index with mode 0, res 0, base cell 0, and 7 for all index digits
-#define H3_INIT 0b0'0000'000'0000'0000000'111111111111111111111111111111111111111111111
+#define H3_INIT 0b0000000000000000000111111111111111111111111111111111111111111111
 #endif
 
 #ifndef H3_INVALID_INDEX
@@ -171,11 +171,11 @@ uint64_t h3GetIndexCount(int resolution)
 	static constexpr uint64_t INDEX_COUNT_PER_RES[MAX_SUPPORTED_RESOLUTION+1] = {
 		       122,
 		       842,
-		     5'882,
-		    41'162,
-		   288'122,
-		 2'016'842,
-		14'117'882,
+		     5882,
+		    41162,
+		   288122,
+		 2016842,
+		14117882,
 	};
 	if(IS_VALID_RESOLUTION(resolution))
 		return INDEX_COUNT_PER_RES[resolution];
