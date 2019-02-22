@@ -5,7 +5,9 @@
 #include <QtWidgets/QRubberBand>
 #include <h3/h3api.h>
 #include "map.hpp"
-
+#include <QMouseEvent>
+#include <QScrollBar>
+#include <QDebug>
 
 enum PolyfillError
 {

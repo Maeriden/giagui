@@ -1,36 +1,5 @@
 #include "MapWindow.hpp"
 
-#include <QApplication>
-#include <QHBoxLayout>
-#include <QGraphicsScene>
-#include <QtGui/QDoubleValidator>
-#include <QtSvg/QGraphicsSvgItem>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QMessageBox>
-#include <QtWidgets/QMenuBar>
-
-
-#include <QSpinBox>
-// https://bugreports.qt.io/browse/QTBUG-14259
-class IntSpinBox : public QSpinBox
-{
-public:
-	explicit IntSpinBox(QWidget* parent = nullptr) : QSpinBox(parent) {}
-	
-	// Override default behavior of stepping if step buttons are held down
-	void timerEvent(QTimerEvent *event) override
-	{
-		QWidget::timerEvent(event); // NOLINT(bugprone-parent-virtual-call)
-	}
-	
-	// Do not highlight the text in the spinbox after step buttons are pressed
-	void stepBy(int steps) override
-	{
-		QSpinBox::stepBy(steps);
-		lineEdit()->deselect();
-	}
-};
-
 
 // https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
 class DoubleValidator : public QDoubleValidator
@@ -366,7 +335,7 @@ void MapWindow::onActionOpenFile()
 			
 			this->setAllLineEditEnabled(false);
 			this->clearAllLineEditNoSignal();
-			
+/*** ALE_DOUBTS: a cosa servono le due chiamate a <blockSignals> ***/
 			this->resolutionSpinbox->blockSignals(true);
 			this->resolutionSpinbox->setValue(this->h3State->resolution);
 			this->resolutionSpinbox->blockSignals(false);
@@ -669,6 +638,7 @@ void MapWindow::onResolutionChanged(int resolution)
 	
 	if(!this->h3State->cellsData.empty())
 	{
+		QApplication::postEvent(this->resolutionSpinbox, new QMouseEvent(QEvent::MouseButtonRelease, QPoint( 0, 0 ), Qt::LeftButton, Qt::NoButton, Qt::NoModifier) );
 		QString title    = QString();
 		QString question = tr("Changing resolution will reset stored data. Proceed?");
 		QMessageBox* box = new QMessageBox(QMessageBox::Question, title, question, QMessageBox::Ok|QMessageBox::Cancel, this);
@@ -705,6 +675,7 @@ void MapWindow::onResolutionChangedDialogFinished(int dialogResult)
 	}
 	else
 	{
+/*** ALE_DOUBTS: a cosa servono le due chiamate a <blockSignals> ***/
 		this->resolutionSpinbox->blockSignals(true);
 		this->resolutionSpinbox->setValue(this->h3State->resolution);
 		this->resolutionSpinbox->blockSignals(false);

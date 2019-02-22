@@ -1,7 +1,6 @@
 #include "map.hpp"
 
-#include <fstream>
-#include <cpptoml.h>
+
 
 
 int importFile(const char* filePath, int* resolution, std::map<H3Index, CellData>* data)

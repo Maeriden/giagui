@@ -2,12 +2,16 @@
 #define GIAGUI_MAINWINDOW_HPP
 
 #include <QMainWindow>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QFormLayout>
+#include <QLabel>
+#include <QFileDialog>
+#include <QMessageBox>
+#include "MapWindow.hpp"
 
-
-class QFormLayout;
-class QLabel;
-class QLineEdit;
-class MapWindow;
 
 
 class MainWindow : public QMainWindow

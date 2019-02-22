@@ -1,11 +1,6 @@
 #include "MainWindow.hpp"
-#include "MapWindow.hpp"
-#include <QMenuBar>
-#include <QFormLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QFileDialog>
-#include <QMessageBox>
+
+
 
 
 struct SimulationData

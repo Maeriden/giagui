@@ -1,8 +1,5 @@
 #include "MapView.hpp"
 
-#include <QMouseEvent>
-#include <QScrollBar>
-#include <QDebug>
 
 
 #define POLYFILL_WIDTH_FACTOR 0.45

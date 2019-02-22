@@ -9,7 +9,16 @@
 #include <QGridLayout>
 #include <QToolBar>
 #include <QStatusBar>
+#include <QApplication>
+#include <QHBoxLayout>
+#include <QGraphicsScene>
+#include <QtGui/QDoubleValidator>
+#include <QtSvg/QGraphicsSvgItem>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QMenuBar>
 
+#include "IntSpinBox.hpp"
 #include "map.hpp"
 #include "MapView.hpp"
 
@@ -20,8 +29,6 @@ enum MapTool
 	Edit,
 };
 
-
-class IntSpinBox;
 
 
 class MapWindow : public QMainWindow

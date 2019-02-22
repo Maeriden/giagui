@@ -6,6 +6,8 @@
 #include <h3/h3api.h>
 #include <QRectF>
 #include <QSizeF>
+#include <fstream>
+#include <cpptoml.h>
 
 
 #define NEW new(std::nothrow)
