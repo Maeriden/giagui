@@ -40,10 +40,10 @@ set(SOURCE_FILES
         source/MapWindow.cpp source/MapWindow.hpp
         source/MapView.cpp source/MapView.hpp)
 
-set(UI_FILES
-        source/mainwindow.ui)
-
 set(RESOURCE_FILES
+        resources/resources.qrc)
+
+set(UI_FILES
         )
 
 add_executable(${PROJECT_NAME}
