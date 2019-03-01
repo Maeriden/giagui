@@ -2,7 +2,7 @@
 
 
 // https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
-class DoubleValidator : public QDoubleValidator
+/*class DoubleValidator : public QDoubleValidator
 {
 public:
 	DoubleValidator(double min, double max, int decimals, QObject* parent = nullptr) : QDoubleValidator(min, max, decimals, parent) {}
@@ -14,7 +14,7 @@ public:
 			return QValidator::Acceptable;
 		return QDoubleValidator::validate(input, pos);
 	}
-};
+};*/
 
 
 MapWindow::MapWindow(QWidget *parent) : QMainWindow(parent),
@@ -335,7 +335,7 @@ void MapWindow::onActionOpenFile()
 			
 			this->setAllLineEditEnabled(false);
 			this->clearAllLineEditNoSignal();
-/*** ALE_DOUBTS: a cosa servono le due chiamate a <blockSignals> ***/
+/* COMMENTO: a cosa servono le due chiamate a <blockSignals> ***/
 			this->resolutionSpinbox->blockSignals(true);
 			this->resolutionSpinbox->setValue(this->h3State->resolution);
 			this->resolutionSpinbox->blockSignals(false);
@@ -437,10 +437,12 @@ void MapWindow::onActionEditTool()
 
 void MapWindow::onCellChangedWater()
 {
+	/* COMMENTO: questo può mai accadere? */
 	if(this->h3State->activeIndex == H3_INVALID_INDEX)
 		return;
 	
 	// If all values would be NaN, remove cell
+	/* COMMENTO: questo può mai accadere? */
 	if(this->editWater->text().isEmpty())
 	{
 		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
@@ -675,7 +677,7 @@ void MapWindow::onResolutionChangedDialogFinished(int dialogResult)
 	}
 	else
 	{
-/*** ALE_DOUBTS: a cosa servono le due chiamate a <blockSignals> ***/
+/* COMMENTO: a cosa servono le due chiamate a <blockSignals> */
 		this->resolutionSpinbox->blockSignals(true);
 		this->resolutionSpinbox->setValue(this->h3State->resolution);
 		this->resolutionSpinbox->blockSignals(false);

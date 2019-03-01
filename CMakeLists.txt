@@ -39,7 +39,8 @@ set(SOURCE_FILES
         source/MainWindow.cpp source/MainWindow.hpp
         source/MapWindow.cpp source/MapWindow.hpp
         source/MapView.cpp source/MapView.hpp
-		source/IntSpinbox.cpp source/IntSpinbox.hpp)
+		source/IntSpinbox.cpp source/IntSpinbox.hpp
+		source/DoubleValidator.cpp source/DoubleValidator.hpp)
 
 set(RESOURCE_FILES
         resources/resources.qrc)

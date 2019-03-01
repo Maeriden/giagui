@@ -15,9 +15,8 @@ class IntSpinBox : public QSpinBox
 		
 		void stepBy(int steps) override;
 		
-		//protected:
-		
-		//void timerEvent(QTimerEvent *event) override;
+		/*protected:
+		void timerEvent(QTimerEvent *event) override; */
 	
 };
 

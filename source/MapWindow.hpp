@@ -18,6 +18,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QMenuBar>
 
+#include "DoubleValidator.hpp"
 #include "IntSpinBox.hpp"
 #include "map.hpp"
 #include "MapView.hpp"
@@ -35,6 +36,8 @@ class MapWindow : public QMainWindow
 {
 Q_OBJECT
 	
+	
+/* COMMENTO: perchè public ripetuto? */	
 public:
 	static constexpr int DECIMAL_DIGITS = 6;
 

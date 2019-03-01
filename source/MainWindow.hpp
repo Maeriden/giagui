@@ -10,8 +10,26 @@
 #include <QLabel>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <cpptoml.h>
+#include <fstream>
+
+#include "DoubleValidator.hpp"
 #include "MapWindow.hpp"
 
+
+struct SimulationData
+{
+	double      power;
+	std::string output;
+	double      innerValue;
+	double      outerValue;
+	std::string outerInput;
+};
+
+
+int exportSimulation(const char* filePath, SimulationData* data);
+
+int importSimulation(const char* filePath, SimulationData* data);
 
 
 class MainWindow : public QMainWindow
@@ -37,7 +55,9 @@ protected:
 	void onTextEditedMeshOuterInput(const QString& text);
 	
 	void onDestroyedMapWindow(QObject* widget);
-	
+
+
+/* COMMENTO: perchè private ripetuto? */	
 private:
 	void setupUi();
 	

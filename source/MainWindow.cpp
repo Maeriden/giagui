@@ -2,22 +2,7 @@
 
 
 
-
-struct SimulationData
-{
-	double      power;
-	std::string output;
-	double      innerValue;
-	double      outerValue;
-	std::string outerInput;
-};
-
-
-int exportSimulation(const char* filePath, SimulationData* data);
-int importSimulation(const char* filePath, SimulationData* data);
-
-
-class NumberValidator : public QDoubleValidator
+/*class NumberValidator : public QDoubleValidator
 {
 public:
 	explicit NumberValidator(int decimals, QObject* parent = nullptr) : QDoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, decimals, parent) {}
@@ -29,7 +14,7 @@ public:
 			return QValidator::Acceptable;
 		return QDoubleValidator::validate(input, pos);
 	}
-};
+};*/
 
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
@@ -104,7 +89,9 @@ void MainWindow::setupUi()
 		
 		this->editPower = new QLineEdit(this->centralwidget);
 		this->editPower->setObjectName(QString::fromUtf8("editPower"));
-		this->editPower->setValidator(new NumberValidator(3));
+		//this->editPower->setValidator(new NumberValidator(3));
+		this->editPower->setValidator(new DoubleValidator(3));
+		
 		connect(this->editPower, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshPower);
 		
 		this->formLayout->setWidget(0, QFormLayout::LabelRole, labelPower);
@@ -127,7 +114,8 @@ void MainWindow::setupUi()
 		
 		this->editInnerValue = new QLineEdit(this->centralwidget);
 		this->editInnerValue->setObjectName(QString::fromUtf8("editInnerValue"));
-		this->editInnerValue->setValidator(new NumberValidator(3));
+		//this->editInnerValue->setValidator(new NumberValidator(3));
+		this->editInnerValue->setValidator(new DoubleValidator(3));
 		connect(this->editInnerValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshInnerValue);
 		
 		this->formLayout->setWidget(2, QFormLayout::LabelRole, labelInnerValue);
@@ -139,7 +127,8 @@ void MainWindow::setupUi()
 		
 		this->editOuterValue = new QLineEdit(this->centralwidget);
 		this->editOuterValue->setObjectName(QString::fromUtf8("editOuterValue"));
-		this->editOuterValue->setValidator(new NumberValidator(3));
+		//this->editOuterValue->setValidator(new NumberValidator(3));
+		this->editInnerValue->setValidator(new DoubleValidator(3));
 		connect(this->editOuterValue, &QLineEdit::textEdited, this, &MainWindow::onTextEditedMeshOuterValue);
 		
 		this->formLayout->setWidget(3, QFormLayout::LabelRole, labelOuterValue);
@@ -324,8 +313,7 @@ void MainWindow::onDestroyedMapWindow(QObject* widget)
 }
 
 
-#include <cpptoml.h>
-#include <fstream>
+
 
 
 int importSimulation(const char* filePath, SimulationData* data)
