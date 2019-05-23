@@ -73,8 +73,8 @@ public:
 	
 	
 protected:
-	QColor getGeoValueColor(long   geoValue);
-	QColor getGeoValueColor(double geoValue);
+	QColor getGeoValueColor(int64_t geoValue);
+	QColor getGeoValueColor(double  geoValue);
 	void drawForeground(QPainter* painter, const QRectF& exposed) override;
 
 	void mousePressEvent(QMouseEvent* event) override;

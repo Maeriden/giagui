@@ -177,7 +177,7 @@ GeoValue toGeoValue(const QString& text, bool isInteger, bool* ok)
 {
 	GeoValue result = {0};
 	if(isInteger)
-		result.integer = text.toInt(ok);
+		result.integer = (int64_t)text.toLong(ok);
 	else
 		result.real = text.toDouble(ok);
 	return result;

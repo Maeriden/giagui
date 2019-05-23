@@ -468,11 +468,11 @@ QSizeF MapView::mapSize() const
 }
 
 
-QColor MapView::getGeoValueColor(long geoValue)
+QColor MapView::getGeoValueColor(int64_t geoValue)
 {
 	assert(dataset);
-	long minValue = dataset->minValue.integer;
-	long maxValue = dataset->maxValue.integer;
+	int64_t minValue = dataset->minValue.integer;
+	int64_t maxValue = dataset->maxValue.integer;
 	assert(minValue <= maxValue);
 	if(minValue == maxValue)
 		return QColor(255, 0, 0, 64);

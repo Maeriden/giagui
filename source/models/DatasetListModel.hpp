@@ -8,7 +8,7 @@
 struct Dataset;
 
 
-struct DatasetListModel : public QAbstractListModel
+class DatasetListModel : public QAbstractListModel
 {
 protected:
 	std::vector<Dataset*> items;

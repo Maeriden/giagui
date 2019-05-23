@@ -10,7 +10,7 @@
 
 class QLineEdit;
 class QSpinBox;
-class Dataset;
+struct Dataset;
 
 
 class DatasetControlWidget : public QWidget

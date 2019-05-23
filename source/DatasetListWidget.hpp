@@ -8,7 +8,7 @@ class QListView;
 class QPushButton;
 class QToolButton;
 
-class Dataset;
+struct Dataset;
 class DatasetListModel;
 
 
