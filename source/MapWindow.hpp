@@ -1,52 +1,86 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef GIAGUI_MAPWINDOW_H
+#define GIAGUI_MAPWINDOW_H
 
-#include <QLabel>
+
+#include <utility>
+#include <queue>
 #include <QMainWindow>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QMouseEvent>
-#include <QGridLayout>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QApplication>
-#include <QHBoxLayout>
-#include <QGraphicsScene>
-#include <QtGui/QDoubleValidator>
-#include <QtSvg/QGraphicsSvgItem>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QMessageBox>
-#include <QtWidgets/QMenuBar>
-
-#include "DoubleValidator.hpp"
-#include "IntSpinBox.hpp"
-#include "map.hpp"
-#include "MapView.hpp"
+#include <cpptoml.h>
+#include "Dataset.hpp"
+#include "MapUtils.hpp"
 
 
-enum MapTool
-{
-	Rect,
-	Edit,
-};
+class QObject;
+class QEvent;
+class QKeyEvent;
+class QCloseEvent;
+class QMouseEvent;
+class QWidget;
+class QMenuBar;
+class QToolBar;
+class QLabel;
+class QLineEdit;
+class IntSpinBox;
+class DatasetListWidget;
+class DatasetControlWidget;
+class MapView;
 
+class DatasetListModel;
 
 
 class MapWindow : public QMainWindow
 {
-Q_OBJECT
+	Q_OBJECT
+	
+public:
+	enum MapTool
+	{
+		Mark,
+		Unmark,
+		Grid,
+	};
+	
+	struct DatasetSaveState
+	{
+		std::string path     = "";
+		bool        modified = false;
+		inline DatasetSaveState() : path(""), modified(false) {}
+		inline DatasetSaveState(std::string path, bool modified) : path(std::move(path)), modified(modified) {}
+	};
 	
 	
-/* COMMENTO: perchè public ripetuto? */	
-public:
-	static constexpr int DECIMAL_DIGITS = 6;
-
-public:
-	H3State* h3State = nullptr;
-	MapTool  mapTool = MapTool::Rect;
+protected:
+	// Pointer to data source
+	DatasetListModel* datasets = nullptr;
+	
+	// Collection of user-selected cells to highlight in UI
+	HashSet<H3Index> highlightedIndices;
+	
+	// Collection of indices used to draw the grid
+	HashSet<H3Index> gridIndices;
+	
+	HashMap<Dataset*, DatasetSaveState> datasetSaveStates;
+	
+	MapTool mapTool = MapTool::Mark;
+	
+	
+	DatasetListWidget*    datasetListWidget    = nullptr;
+	DatasetControlWidget* datasetControlWidget = nullptr;
+	MapView*              mapView              = nullptr;
+	QLineEdit*            geoValueEditLine     = nullptr;
+	IntSpinBox*           resolutionSpinbox    = nullptr;
+	QLabel*               statusLabel          = nullptr;
+	QToolBar*             toolBar              = nullptr;
 	
 public:
 	explicit MapWindow(QWidget* parent = nullptr);
+	
+	
+private:
+	void addActionsToMenuBar(QMenuBar* menuBar);
+	void addActionsToToolBar(QToolBar* toolBar);
+	void addWidgetsToCentralWidget(QWidget* centralWidget);
+	
 	
 protected:
 	bool eventFilter(QObject* o, QEvent* e) override;
@@ -55,48 +89,48 @@ protected:
 	void closeEvent(QCloseEvent* event) override;
 	
 	void onActionOpenFile();
+	void onOpenFileDialogAccepted();
+	
 	void onActionSaveFile();
-	void onActionSaveFileAs();
+	void onActionSaveAs();
+	void onActionSaveAll();
+	void saveFileBegin(Dataset* dataset, const std::string& path);
+	void onSaveFileDialogAccepted();
+	void saveFileEnd(Dataset* dataset, const std::string& path);
+	
+	void onActionConfigureSimulation();
+	void onSimulationConfigDialogAccepted();
+	
 	void onActionZoomOut();
 	void onActionZoomIn();
-	void onActionRectTool();
-	void onActionEditTool();
 	
-	void onCellChangedWater();
-	void onCellChangedIce();
-	void onCellChangedSediment();
-	void onCellChangedDensity();
+	void onGridToolTriggered();
+	void onMarkToolTriggered();
+	void onUnmarkToolTriggered();
 	
-	void onResolutionChanged(int value);
-	void onResolutionChangedDialogFinished(int dialogResult);
+	void onDatasetListItemCreated(Dataset* dataset);
+	void onDatasetListItemSelected(Dataset* dataset);
+	void onDatasetListItemDeleted(Dataset* dataset);
 	
-	void onPolyfillFailed(PolyfillError error);
+	void onDatasetResolutionChanged(Dataset* dataset, int value);
+	void onDatasetResolutionDecreased(Dataset* dataset, int oldResolution);
+	void onDatasetResolutionIncreased(Dataset* dataset, int oldResolution);
+	void onDatasetDefaultChanged(Dataset* dataset, GeoValue newDefaultValue);
+	void onDatasetDensityChanged(Dataset* dataset, double value);
+	void onDatasetValueRangeChanged(Dataset* dataset, GeoValue minValue, GeoValue maxValue);
 	
-	bool handleMapEventMousePress(MapView* mapView, QMouseEvent* event);
-	bool handleMapEventMouseMove(MapView* mapView, QMouseEvent* event);
-	bool handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event);
+	void onGeoValueEditFinished();
 	
-	void setupToolbar();
-	void highlightCell(H3Index index);
-	void setAllLineEditEnabled(bool enabled);
-	void clearAllLineEditNoSignal();
+	void onMapViewMouseMove(QMouseEvent* event);
+	void onMapViewCellSelected(H3Index index);
+	void onMapViewAreaSelected(QRectF area);
 	
-	void setupUi();
+	void writeHighlightedGeoValuesIntoLineEdit();
 	
-private:
-	QWidget*     centralWidget;
-	QGridLayout* gridLayout;
-	MapView*     mapView;
-	QToolBar*    mainToolBar;
-	QStatusBar*  statusBar;
-	
-	QLineEdit*  editWater;
-	QLineEdit*  editIce;
-	QLineEdit*  editSediment;
-	QLineEdit*  editDensity;
-	IntSpinBox* resolutionSpinbox;
-	QLabel*     statusLabel;
+	Dataset* deserializeDataset(const std::string& path);
+	Dataset* deserializeDataset(const std::string& path, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName);
+	bool     serializeDataset(const std::string& path, Dataset* dataset);
 };
 
 
-#endif // MAINWINDOW_H
+#endif // GIAGUI_MAPWINDOW_H

@@ -1,266 +1,259 @@
 #include "MapWindow.hpp"
 
+#include <QApplication>
+#include <QKeyEvent>
+#include <QMenuBar>
+#include <QToolBar>
+#include <QStatusBar>
+#include <QVBoxLayout>
+#include <QSplitter>
+#include <QListWidget>
+#include <QLabel>
+#include <QLineEdit>
+#include <QGraphicsSvgItem>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QInputDialog>
 
-// https://stackoverflow.com/questions/35178569/doublevalidator-is-not-checking-the-ranges-properly
-/*class DoubleValidator : public QDoubleValidator
+#include "MapView.hpp"
+#include "GeoValueValidator.hpp"
+#include "DatasetListWidget.hpp"
+#include "DatasetControlWidget.hpp"
+#include "source/dialogs/SimulationConfigDialog.hpp"
+#include "models/DatasetListModel.hpp"
+#include "dialogs/DatasetCreateDialog.hpp"
+
+
+MapWindow::MapWindow(QWidget* parent) : QMainWindow(parent)
 {
-public:
-	DoubleValidator(double min, double max, int decimals, QObject* parent = nullptr) : QDoubleValidator(min, max, decimals, parent) {}
-	
-	// Make empty strings a valid "number" (to represent NaN values)
-	State validate(QString& input, int& pos) const override
-	{
-		if(input.isEmpty())
-			return QValidator::Acceptable;
-		return QDoubleValidator::validate(input, pos);
-	}
-};*/
-
-
-MapWindow::MapWindow(QWidget *parent) : QMainWindow(parent),
-	h3State(&globalH3State)
-{
-	H3State_reset(this->h3State, 0);
-	
-	this->setupUi();
-	this->setupToolbar();
-	
-	this->statusLabel = new QLabel();
-	this->statusBar->addWidget(this->statusLabel);
-	
-	QGraphicsScene* scene = new QGraphicsScene(this);
-	scene->addItem(new QGraphicsSvgItem(QString::fromUtf8(":/images/world.svg")));
-	this->mapView->setScene(scene);
-	
-	// IMPORTANT: https://stackoverflow.com/questions/2445997/qgraphicsview-and-eventfilter 
-	this->mapView->viewport()->installEventFilter(this);
-	this->mapView->setFocusPolicy(Qt::FocusPolicy::NoFocus);
-	
-	connect(this->mapView, &MapView::polyfillFailed, this, &MapWindow::onPolyfillFailed);
-}
-
-
-void MapWindow::setupUi()
-{
-	if(objectName().isEmpty())
-		setObjectName(QString::fromUtf8("MapWindow"));
+	datasets = new DatasetListModel(this);
+#if 0
+	datasets->appendItem(new Dataset("prova", true, false));
+#endif
 	resize(1000, 750);
 	
-	centralWidget = new QWidget(this);
-	centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
 	
-	gridLayout = new QGridLayout(centralWidget);
-	gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-	gridLayout->setSpacing(0);
-	gridLayout->setContentsMargins(0, 0, 0, 0);
+	QSplitter* hSplitter = new QSplitter(Qt::Orientation::Horizontal, this);
+	setCentralWidget(hSplitter);
+	addWidgetsToCentralWidget(hSplitter);
+	hSplitter->setStretchFactor(0, 0);
+	hSplitter->setStretchFactor(1, 1);
 	
-	mapView = new MapView(centralWidget);
-	mapView->setObjectName(QString::fromUtf8("mapView"));
-	QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	sizePolicy.setHorizontalStretch(0);
-	sizePolicy.setVerticalStretch(0);
-	sizePolicy.setHeightForWidth(mapView->sizePolicy().hasHeightForWidth());
-	mapView->setSizePolicy(sizePolicy);
-	mapView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	mapView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	mapView->setDragMode(QGraphicsView::NoDrag);
 	
-	gridLayout->addWidget(mapView, 0, 0, 1, 1);
+	QMenuBar* menuBar = new QMenuBar(this);
+	menuBar->setGeometry(QRect(0, 0, 1000, 20));
+	setMenuBar(menuBar);
+	addActionsToMenuBar(menuBar);
 	
-	setCentralWidget(centralWidget);
 	
-	QMenuBar* menubar = new QMenuBar(this);
-	menubar->setObjectName(QString::fromUtf8("menuBar"));
-	menubar->setGeometry(QRect(0, 0, 1000, 20));
-	setMenuBar(menubar);
-	{
-		QMenu* menuFile = new QMenu(menubar);
-		menuFile->setObjectName(QString::fromUtf8("menuFile"));
-		menuFile->setTitle(tr("File"));
-		
-		QAction* actionOpen = new QAction(QIcon::fromTheme(QString::fromUtf8("document-open")), tr("Open..."));
-		actionOpen->setShortcuts(QKeySequence::StandardKey::Open);
-		actionOpen->setStatusTip(tr("Open"));
-		connect(actionOpen, &QAction::triggered, this, &MapWindow::onActionOpenFile);
-		menuFile->addAction(actionOpen);
-		
-		QAction* actionSave = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save")), tr("Save"));
-		actionSave->setShortcuts(QKeySequence::StandardKey::Save);
-		actionSave->setStatusTip(tr("Save"));
-		connect(actionSave, &QAction::triggered, this, &MapWindow::onActionSaveFile);
-		menuFile->addAction(actionSave);
-		
-		QAction* actionSaveAs = new QAction(QIcon::fromTheme(QString::fromUtf8("document-save-as")), tr("Save As..."));
-		actionSaveAs->setShortcuts(QKeySequence::StandardKey::SaveAs);
-		actionSaveAs->setStatusTip(tr("Save as"));
-		connect(actionSaveAs, &QAction::triggered, this, &MapWindow::onActionSaveFileAs);
-		menuFile->addAction(actionSaveAs);
-		
-		menuFile->addSeparator();
-		
-		QAction* actionClose = new QAction(QIcon::fromTheme(QString::fromUtf8("window-close")), tr("Close"));
-		actionClose->setShortcuts(QKeySequence::StandardKey::Close);
-		actionClose->setStatusTip(tr("Close window"));
-		connect(actionClose, &QAction::triggered, this, &MapWindow::close);
-		menuFile->addAction(actionClose);
-		
-		menubar->addAction(menuFile->menuAction());
-	}
+	QToolBar* toolBar = new QToolBar(this);
+	toolBar->setMovable(false);
+	toolBar->setAllowedAreas(Qt::TopToolBarArea);
+	toolBar->setIconSize(QSize(16, 16));
+	addToolBar(Qt::TopToolBarArea, toolBar);
+	addActionsToToolBar(toolBar);
+	this->toolBar = toolBar;
 	
-	mainToolBar = new QToolBar(this);
-	mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
-	mainToolBar->setWindowTitle(tr("Toolbar"));
-	mainToolBar->setMovable(false);
-	mainToolBar->setAllowedAreas(Qt::TopToolBarArea);
-	mainToolBar->setIconSize(QSize(16, 16));
-	addToolBar(Qt::TopToolBarArea, mainToolBar);
 	
-	statusBar = new QStatusBar(this);
-	statusBar->setObjectName(QString::fromUtf8("statusBar"));
+	QStatusBar* statusBar = new QStatusBar(this);
 	statusBar->setSizeGripEnabled(true);
 	setStatusBar(statusBar);
 	
-	QMetaObject::connectSlotsByName(this);
+	
+	statusLabel = new QLabel();
+	statusBar->addPermanentWidget(statusLabel);
 }
 
 
-void MapWindow::setupToolbar()
+void MapWindow::addWidgetsToCentralWidget(QWidget* centralWidget)
 {
-	QToolBar* toolbar = this->mainToolBar;
+	{
+		QSplitter* group = new QSplitter(Qt::Orientation::Vertical, centralWidget);
+		
+		datasetListWidget = new DatasetListWidget(datasets, group);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemCreated, this, &MapWindow::onDatasetListItemCreated);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemSelected, this,
+		                 &MapWindow::onDatasetListItemSelected);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemDeleted, this, &MapWindow::onDatasetListItemDeleted);
+		
+		datasetControlWidget = new DatasetControlWidget(group);
+		QObject::connect(datasetControlWidget, &DatasetControlWidget::resolutionChanged, this, &MapWindow::onDatasetResolutionChanged);
+		QObject::connect(datasetControlWidget, &DatasetControlWidget::defaultChanged,    this, &MapWindow::onDatasetDefaultChanged);
+		QObject::connect(datasetControlWidget, &DatasetControlWidget::densityChanged,    this, &MapWindow::onDatasetDensityChanged);
+		QObject::connect(datasetControlWidget, &DatasetControlWidget::valueRangeChanged, this, &MapWindow::onDatasetValueRangeChanged);
+		
+		group->setStretchFactor(0, 0);
+		group->setStretchFactor(1, 1);
+	}
 	
+	
+	mapView = new MapView(&highlightedIndices, &gridIndices, centralWidget);
+	mapView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	mapView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	mapView->setDragMode(QGraphicsView::NoDrag);
+	mapView->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+	mapView->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+	
+	mapView->viewport()->installEventFilter(this); // NOTE: https://stackoverflow.com/questions/2445997/qgraphicsview-and-eventfilter
+	QObject::connect(mapView, &MapView::cellSelected, this, &MapWindow::onMapViewCellSelected);
+	QObject::connect(mapView, &MapView::areaSelected, this, &MapWindow::onMapViewAreaSelected);
+}
+
+
+void MapWindow::addActionsToMenuBar(QMenuBar* menuBar)
+{
+	QMenu* menuFile = new QMenu(tr("File"), this);
 	{
-		QActionGroup* actionGroup = new QActionGroup(this);
-		
-		QAction* zoomOutAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-out")), tr("Zoom Out"), actionGroup);
-		zoomOutAction->setShortcuts(QKeySequence::StandardKey::ZoomOut);
-		zoomOutAction->setStatusTip(tr("Zoom out"));
-		connect(zoomOutAction, &QAction::triggered, this, &MapWindow::onActionZoomOut);
-		
-		QAction* zoomInAction = new QAction(QIcon::fromTheme(QString::fromUtf8("zoom-in")), tr("Zoom In"), actionGroup);
-		zoomInAction->setShortcuts(QKeySequence::StandardKey::ZoomIn);
-		zoomInAction->setStatusTip(tr("Zoom in"));
-		connect(zoomInAction,  &QAction::triggered, this, &MapWindow::onActionZoomIn);
-		
-		toolbar->addActions(actionGroup->actions());
+		QAction* action = new QAction(this);
+		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-open")));
+		action->setText(tr("Open..."));
+		action->setShortcuts(QKeySequence::StandardKey::Open);
+		action->setStatusTip(tr("Open file"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionOpenFile);
+		menuFile->addAction(action);
+	} {
+		QAction* action = new QAction(this);
+		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save")));
+		action->setText(tr("Save"));
+		action->setShortcuts(QKeySequence::StandardKey::Save);
+		action->setStatusTip(tr("Save file"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveFile);
+		menuFile->addAction(action);
+	} {
+		QAction* action = new QAction(this);
+		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save-as")));
+		action->setText(tr("Save As..."));
+		action->setShortcuts(QKeySequence::StandardKey::SaveAs);
+		action->setStatusTip(tr("Save file as"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveAs);
+		menuFile->addAction(action);
 	}
-	toolbar->addSeparator();
+	menuFile->addSeparator();
 	{
-		QActionGroup* actionGroup = new QActionGroup(this);
-		
-		QAction* rectAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-rect.svg")), tr("Rect Tool"), actionGroup);
-		rectAction->setStatusTip(tr("Select area to polyfill"));
-		rectAction->setCheckable(true);
-		rectAction->setChecked(true);
-		connect(rectAction, &QAction::triggered, this, &MapWindow::onActionRectTool);
-		
-		QAction* editAction = new QAction(QIcon(QString::fromUtf8(":/images/icon-edit.svg")), tr("Edit Tool"), actionGroup);
-		editAction->setStatusTip(tr("Edit cell values"));
-		editAction->setCheckable(true);
-		connect(editAction, &QAction::triggered, this, &MapWindow::onActionEditTool);
-		
-		toolbar->addActions(actionGroup->actions());
+		QAction* action = new QAction(this);
+		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-close")));
+		action->setText(tr("Close"));
+		action->setShortcuts(QKeySequence::StandardKey::Close);
+		action->setStatusTip(tr("Close window"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::close);
+		menuFile->addAction(action);
 	}
-	toolbar->addSeparator();
+	
+	
+	QMenu* menuTools = new QMenu(tr("Tools"), this);
+	{
+		QAction* action = new QAction(this);
+		action->setText(tr("Configure Simulation..."));
+		action->setStatusTip(tr("Create a configuration file for a simulation"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionConfigureSimulation);
+		menuTools->addAction(action);
+	}
+	
+	
+	menuBar->addAction(menuFile->menuAction());
+	menuBar->addAction(menuTools->menuAction());
+}
+
+
+void MapWindow::addActionsToToolBar(QToolBar* toolBar)
+{
+	{	QActionGroup* actionGroup = new QActionGroup(this);
+		
+		QAction* actionZoomOut = new QAction();
+		actionZoomOut->setIcon(QIcon::fromTheme(QString::fromUtf8("zoom-out")));
+		actionZoomOut->setText(tr("Zoom Out"));
+		actionZoomOut->setActionGroup(actionGroup);
+		actionZoomOut->setShortcuts(QKeySequence::StandardKey::ZoomOut);
+		actionZoomOut->setStatusTip(tr("Zoom out"));
+		QObject::connect(actionZoomOut, &QAction::triggered, this, &MapWindow::onActionZoomOut);
+		
+		QAction* actionZoomIn = new QAction();
+		actionZoomIn->setIcon(QIcon::fromTheme(QString::fromUtf8("zoom-in")));
+		actionZoomIn->setText(tr("Zoom In"));
+		actionZoomIn->setActionGroup(actionGroup);
+		actionZoomIn->setShortcuts(QKeySequence::StandardKey::ZoomIn);
+		actionZoomIn->setStatusTip(tr("Zoom in"));
+		QObject::connect(actionZoomIn, &QAction::triggered, this, &MapWindow::onActionZoomIn);
+		
+		toolBar->addActions(actionGroup->actions());
+	}
+	
+	toolBar->addSeparator();
+	
+	{	QActionGroup* actionGroup = new QActionGroup(this);
+	
+		QAction* actionMark = new QAction();
+		actionMark->setIcon(QIcon(QString::fromUtf8(":/images/icon-cell-mark.svg")));
+		actionMark->setText(tr("Mark"));
+		actionMark->setActionGroup(actionGroup);
+		actionMark->setStatusTip(tr("Click on the map to mark cells for editing"));
+		actionMark->setCheckable(true);
+		QObject::connect(actionMark, &QAction::triggered, this, &MapWindow::onMarkToolTriggered);
+		
+		QAction* actionUnmark = new QAction();
+		actionUnmark->setIcon(QIcon(QString::fromUtf8(":/images/icon-cell-unmark.svg")));
+		actionUnmark->setText(tr("Unmark"));
+		actionUnmark->setActionGroup(actionGroup);
+		actionUnmark->setStatusTip(tr("Click on the map to unmark cells for editing"));
+		actionUnmark->setCheckable(true);
+		QObject::connect(actionUnmark, &QAction::triggered, this, &MapWindow::onUnmarkToolTriggered);
+		
+		QAction* actionGrid = new QAction();
+		actionGrid->setIcon(QIcon(QString::fromUtf8(":/images/icon-grid.svg")));
+		actionGrid->setText(tr("Grid"));
+		actionGrid->setActionGroup(actionGroup);
+		actionGrid->setStatusTip(tr("Select an area on the map to show the grid"));
+		actionGrid->setCheckable(true);
+		QObject::connect(actionGrid, &QAction::triggered, this, &MapWindow::onGridToolTriggered);
+		
+		toolBar->addActions(actionGroup->actions());
+		actionMark->setChecked(true);
+//		actionGrid->setEnabled(false);
+	}
+	
+	toolBar->addSeparator();
+	
 	{
 		QWidget*     group  = new QWidget(this);
 		QHBoxLayout* layout = new QHBoxLayout(group);
 		layout->setSpacing(6);
 		layout->setContentsMargins(5, 0, 5, 0);
+		toolBar->addWidget(group);
 		
-		QLabel* labelW = new QLabel(tr("Water"), group);
-		layout->addWidget(labelW);
+		QLabel* label = new QLabel(tr("Value"), group);
+		layout->addWidget(label);
 		
-		this->editWater = new QLineEdit(group);
-		this->editWater->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
-		this->editWater->setMinimumWidth(80);
-		this->editWater->setMaximumWidth(100);
-		this->editWater->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-		this->editWater->setEnabled(false);
-		this->editWater->setPlaceholderText(tr("N/A"));
-		this->editWater->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
-		layout->addWidget(this->editWater);
-		connect(this->editWater,    &QLineEdit::editingFinished, this, &MapWindow::onCellChangedWater);
-		
-		QLabel* labelI = new QLabel(tr("Ice"), group);
-		layout->addWidget(labelI);
-		
-		this->editIce = new QLineEdit(group);
-		this->editIce->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
-		this->editIce->setMinimumWidth(80);
-		this->editIce->setMaximumWidth(100);
-		this->editIce->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-		this->editIce->setEnabled(false);
-		this->editIce->setPlaceholderText(tr("N/A"));
-		this->editIce->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
-		layout->addWidget(this->editIce);
-		connect(this->editIce,      &QLineEdit::editingFinished, this, &MapWindow::onCellChangedIce);
-		
-		QLabel* labelS = new QLabel(tr("Sediment"), group);
-		layout->addWidget(labelS);
-		
-		this->editSediment = new QLineEdit(group);
-		this->editSediment->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
-		this->editSediment->setMinimumWidth(80);
-		this->editSediment->setMaximumWidth(100);
-		this->editSediment->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-		this->editSediment->setEnabled(false);
-		this->editSediment->setPlaceholderText(tr("N/A"));
-		this->editSediment->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
-		layout->addWidget(this->editSediment);
-		connect(this->editSediment, &QLineEdit::editingFinished, this, &MapWindow::onCellChangedSediment);
-		
-		QLabel* labelD = new QLabel(tr("Sediment density"), group);
-		layout->addWidget(labelD);
-		
-		this->editDensity = new QLineEdit(group);
-		this->editDensity->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
-		this->editDensity->setMinimumWidth(80);
-		this->editDensity->setMaximumWidth(100);
-		this->editDensity->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-		this->editDensity->setEnabled(false);
-		this->editDensity->setPlaceholderText(tr("N/A"));
-		this->editDensity->setValidator(new DoubleValidator(-DOUBLE_MAX, DOUBLE_MAX, DECIMAL_DIGITS));
-		layout->addWidget(this->editDensity);
-		connect(this->editDensity, &QLineEdit::editingFinished, this, &MapWindow::onCellChangedDensity);
-		
-		toolbar->addWidget(group);
-	}
-	toolbar->addSeparator();
-	{
-		QLabel* label = new QLabel(tr("Resolution"), this);
-		toolbar->addWidget(label);
-		
-		this->resolutionSpinbox = new IntSpinBox(this);
-		this->resolutionSpinbox->setFocusPolicy(Qt::NoFocus);
-		this->resolutionSpinbox->setMinimum(0);
-		this->resolutionSpinbox->setMaximum(MAX_SUPPORTED_RESOLUTION);
-		connect(this->resolutionSpinbox, qOverload<int>(&IntSpinBox::valueChanged), this, &MapWindow::onResolutionChanged);
-		toolbar->addWidget(this->resolutionSpinbox);
+		geoValueEditLine = new QLineEdit(group);
+		geoValueEditLine->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+		geoValueEditLine->setMinimumWidth(80);
+		geoValueEditLine->setMaximumWidth(100);
+		geoValueEditLine->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+		geoValueEditLine->setEnabled(false);
+//		geoValueEditLine->setPlaceholderText(tr("N/A"));
+		geoValueEditLine->setValidator(new GeoValueValidator(-DOUBLE_MAX, DOUBLE_MAX, UI_DOUBLE_PRECISION));
+		QObject::connect(geoValueEditLine, &QLineEdit::editingFinished, this, &MapWindow::onGeoValueEditFinished);
+		layout->addWidget(geoValueEditLine);
 	}
 }
 
 
 bool MapWindow::eventFilter(QObject* object, QEvent* event)
 {
-	if(event->type() == QEvent::MouseButtonPress)
-	{
-		QWidget* viewport = (QWidget*)object;
-		return this->handleMapEventMousePress((MapView*)viewport->parentWidget(), (QMouseEvent*)event);
-	}
+	assert(object == mapView->viewport()); // We want to filter map events only
 	
 	if(event->type() == QEvent::MouseMove)
 	{
-		QWidget* viewport = (QWidget*)object;
-		return this->handleMapEventMouseMove((MapView*)viewport->parentWidget(), (QMouseEvent*)event);
+		onMapViewMouseMove((QMouseEvent*)event);
 	}
-	
-	if(event->type() == QEvent::MouseButtonRelease)
+	if(event->type() == QEvent::MouseButtonPress && ((QMouseEvent*)event)->button() == Qt::LeftButton)
 	{
-		QWidget* viewport = (QWidget*)object;
-		return this->handleMapEventMouseRelease((MapView*)viewport->parentWidget(), (QMouseEvent*)event);
+		onMapViewMouseMove((QMouseEvent*)event);
 	}
-	
-	return false;
+	if(event->type() == QEvent::MouseButtonRelease && ((QMouseEvent*)event)->button() == Qt::LeftButton)
+	{
+		onMapViewMouseMove((QMouseEvent*)event);
+	}
+	return false; // Do not block event
 }
 
 
@@ -269,11 +262,9 @@ void MapWindow::keyPressEvent(QKeyEvent* event)
 	if(event->key() == Qt::Key_Escape)
 	{
 		event->accept();
-		this->h3State->activeIndex = H3_INVALID_INDEX;
-		this->mapView->scene()->invalidate();
-		
-		this->setAllLineEditEnabled(false);
-		this->clearAllLineEditNoSignal();
+		highlightedIndices.clear();
+		writeHighlightedGeoValuesIntoLineEdit();
+		mapView->requestRepaint();
 	}
 	else
 	{
@@ -284,19 +275,26 @@ void MapWindow::keyPressEvent(QKeyEvent* event)
 
 void MapWindow::closeEvent(QCloseEvent* event)
 {
-	bool confirmed = !isWindowModified(); 
+	bool confirmed = true;
+	for(auto& [dataset, saveState] : datasetSaveStates)
+	{
+		if(saveState.modified)
+		{
+			confirmed = false;
+			break;
+		}
+	}
+	
 	if(!confirmed)
 	{
-		QString title    = QString();
 		QString question = tr("There are unsaved changes. Close anyway?");
-		int reply = QMessageBox::question(this, title, question);
+		int reply = QMessageBox::question(this, QString(), question);
 		confirmed = reply == QMessageBox::Yes;
 	}
 	
 	if(confirmed)
 	{
 		event->accept();
-		H3State_reset(this->h3State, 0);
 	}
 	else
 	{
@@ -307,51 +305,43 @@ void MapWindow::closeEvent(QCloseEvent* event)
 
 void MapWindow::onActionOpenFile()
 {
-	QString caption = tr("Import data");
-	QString cwd     = QString();
-	QString filter  = tr("TOML (*.toml);;All Files (*)");
-	QString filePath = QFileDialog::getOpenFileName(this, caption, cwd, filter);
-	if(filePath.isEmpty())
-		return;
+	QFileDialog* dialog = new QFileDialog(this);
+	dialog->setWindowTitle(tr("Open File"));
+	dialog->setNameFilter(tr("TOML+H3 (*.h3);;All Files (*)"));
+	dialog->setAcceptMode(QFileDialog::AcceptOpen);
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onOpenFileDialogAccepted);
+	dialog->open();
+}
+
+
+void MapWindow::onOpenFileDialogAccepted()
+{
+	QFileDialog* fileDialog = static_cast<QFileDialog*>(sender());
 	
-	bool confirmed = this->h3State->cellsData.empty(); 
-	if(!confirmed)
+	for(const QString& qPath : fileDialog->selectedFiles())
 	{
-		QString title    = QString();
-		QString question = tr("Current data will be overwritten. Proceed?");
-		QMessageBox::StandardButton reply = QMessageBox::question(this, title, question, QMessageBox::Ok|QMessageBox::Cancel);
-		confirmed = reply == QMessageBox::Ok;
-	}
-	
-	if(confirmed)
-	{
-		int                         resolution;
-		std::map<H3Index, CellData> cellsData;
-		int error = importFile(filePath.toUtf8().constData(), &resolution, &cellsData);
-		if(error == 0)
+		assert(!qPath.isEmpty());
+		const std::string& path = qPath.toStdString();
+		
+		Dataset* dataset = deserializeDataset(path);
+		if(dataset)
 		{
-			H3State_reset(this->h3State, resolution);
-			this->h3State->cellsData = cellsData;
-			
-			this->setAllLineEditEnabled(false);
-			this->clearAllLineEditNoSignal();
-/* COMMENTO: a cosa servono le due chiamate a <blockSignals> ***/
-			this->resolutionSpinbox->blockSignals(true);
-			this->resolutionSpinbox->setValue(this->h3State->resolution);
-			this->resolutionSpinbox->blockSignals(false);
-			
-			this->mapView->scene()->invalidate();
-			
-			setWindowFilePath(filePath);
-			setWindowModified(false);
-		}
-		if(error == 1)
-		{
-			QMessageBox::information(this, tr("Error"), tr("Unable to open file"));
-		}
-		if(error == 2)
-		{
-			QMessageBox::information(this, tr("Error"), tr("Unable to parse file"));
+			if(datasets->appendItem(dataset))
+			{
+				datasetSaveStates[dataset].path = path;
+				datasetSaveStates[dataset].modified = false;
+			}
+			else
+			{
+				QMessageBox* dialog = new QMessageBox(this);
+				dialog->setWindowTitle(tr("Error"));
+				dialog->setText(tr("Error while adding %1 to the datasets list").arg(QString::fromStdString(dataset->id)));
+				dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+				dialog->open();
+				
+				delete dataset;
+			}
 		}
 	}
 }
@@ -359,491 +349,768 @@ void MapWindow::onActionOpenFile()
 
 void MapWindow::onActionSaveFile()
 {
-	if(windowFilePath().isEmpty())
-	{
-		this->onActionSaveFileAs();
+	Dataset* dataset = datasetListWidget->selection();
+	if(!dataset)
 		return;
-	}
 	
-	int error = exportFile(windowFilePath().toUtf8().constData(), this->h3State->resolution, this->h3State->cellsData);
-	if(error == 0)
+	DatasetSaveState& saveState = datasetSaveStates[dataset];
+	saveFileBegin(dataset, saveState.path);
+}
+
+
+void MapWindow::onActionSaveAs()
+{
+	Dataset* dataset = datasetListWidget->selection();
+	if(!dataset)
+		return;
+	
+	saveFileBegin(dataset, "");
+}
+
+
+void MapWindow::onActionSaveAll()
+{
+	for(Dataset* dataset : *datasets)
 	{
-		setWindowModified(false);
-	}
-	if(error == 1)
-	{
-		QMessageBox::information(this, tr("Error"), tr("Unable to save file"));
-	}
-	else if(error == 2)
-	{
-		QMessageBox::information(this, tr("Error"), tr("I/O error while writing data"));
+		DatasetSaveState& saveState = datasetSaveStates[dataset];
+		saveFileBegin(dataset, saveState.path);
 	}
 }
 
 
-void MapWindow::onActionSaveFileAs()
+void MapWindow::saveFileBegin(Dataset* dataset, const std::string& path)
 {
-	QString caption = tr("Export data");
-	QString cwd     = QString();
-	QString filter  = tr("TOML (*.toml);;All Files (*)");
-	// NOTE: using QFileDialog::getSaveFileName() does not automatically append the extension
-	QFileDialog saveDialog(this, caption, cwd, filter);
-	saveDialog.setAcceptMode(QFileDialog::AcceptSave);
-	saveDialog.setDefaultSuffix(QString::fromUtf8("toml"));
-	int result = saveDialog.exec();
-	if(result != QDialog::Accepted)
-		return;
-	QString filePath = saveDialog.selectedFiles().first();
+	assert(dataset);
+	if(path.empty())
+	{
+		QFileDialog* dialog = new QFileDialog(this);
+		dialog->setWindowTitle(tr("Save File"));
+		dialog->setNameFilter(tr("TOML+H3 (*.h3);;All Files (*)"));
+		dialog->setAcceptMode(QFileDialog::AcceptSave);
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setProperty("dataset", QVariant::fromValue(dataset));
+		dialog->selectFile(QString::fromStdString(dataset->id) + ".h3");
+		dialog->setDefaultSuffix("h3");
+		QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onSaveFileDialogAccepted);
+		dialog->open();
+	}
+	else
+	{
+		saveFileEnd(dataset, path);
+	}
+}
+
+
+void MapWindow::onSaveFileDialogAccepted()
+{
+	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
+	assert(dialog->selectedFiles().size() == 1);
+	assert(dialog->selectedFiles().first().size() > 0);
+	QString path = dialog->selectedFiles().first();
 	
-	setWindowFilePath(filePath);
-	this->onActionSaveFile();
+	Dataset* dataset = dialog->property("dataset").value<Dataset*>();
+	assert(dataset);
+	
+	saveFileEnd(dataset, path.toStdString());
+}
+
+
+void MapWindow::saveFileEnd(Dataset* dataset, const std::string& path)
+{
+	bool success = serializeDataset(path, dataset);
+	if(success)
+	{
+		DatasetSaveState& saveState = datasetSaveStates[dataset];
+		saveState.path     = path;
+		saveState.modified = false;
+		
+		if(dataset == datasetListWidget->selection())
+		{
+			setWindowFilePath(QString::fromStdString(saveState.path));
+			setWindowModified(saveState.modified);
+		}
+	}
+}
+
+
+void MapWindow::onActionConfigureSimulation()
+{
+	SimulationConfigDialog* simulationWindow = new SimulationConfigDialog(this);
+	simulationWindow->setAttribute(Qt::WA_DeleteOnClose);
+	QObject::connect(simulationWindow, &SimulationConfigDialog::accepted, this, &MapWindow::onSimulationConfigDialogAccepted);
+	simulationWindow->open();
+}
+
+
+void MapWindow::onSimulationConfigDialogAccepted()
+{
+	struct {
+		bool operator()(const SimulationConfig::Load::HistoryEntry& a, const SimulationConfig::Load::HistoryEntry& b) {
+			return a.time > b.time;
+		}
+	} descendingOrder;
+	
+	SimulationConfigDialog* simulationConfigDialog = static_cast<SimulationConfigDialog*>(sender());
+	SimulationConfig&       config                 = simulationConfigDialog->configuration;
+	
+	std::sort(config.load.history.begin(), config.load.history.end(), descendingOrder);
+	
+	std::ofstream stream(simulationConfigDialog->path.toStdString());
+	if(!stream.is_open())
+	{
+		QMessageBox* messageBox = new QMessageBox(this);
+		messageBox->setWindowTitle(tr("I/O error"));
+		messageBox->setText(tr("Could not open %1 for writing").arg(simulationConfigDialog->path));
+		messageBox->setStandardButtons(QMessageBox::StandardButton::Ok);
+		QObject::connect(messageBox, &QMessageBox::finished, messageBox, &QMessageBox::deleteLater);
+		messageBox->open();
+		return;
+	}
+	
+	stream << "[mesh.inner]" << std::endl;
+	if(config.mesh.inner.value.has_value())
+		stream << "value = "  << config.mesh.inner.value.value()        << std::endl;
+	if(config.mesh.inner.input.has_value())
+		stream << "input = '" << config.mesh.inner.input.value() << "'" << std::endl;
+	stream << std::endl;
+	
+	stream << "[mesh.outer]" << std::endl;
+	if(config.mesh.outer.value.has_value())
+		stream << "value = "  << config.mesh.outer.value.value()        << std::endl;
+	if(config.mesh.outer.input.has_value())
+		stream << "input = '" << config.mesh.outer.input.value() << "'" << std::endl;
+	stream << std::endl;
+	
+	stream << "[time]"                        << std::endl;
+	stream << "steps = " << config.time.steps << std::endl;
+	stream << std::endl;
+	
+	stream << "[load]"                          << std::endl;
+	stream << "steps = " << config.load.scaling << std::endl;
+	stream << std::endl;
+	
+	for(const SimulationConfig::Load::HistoryEntry& entry : config.load.history)
+	{
+		stream << "[[load.history]]"                <<        std::endl;
+		stream << "time = "      << -entry.time     <<        std::endl;
+		stream << "filename = '" <<  entry.filename << "'" << std::endl;
+		stream << std::endl;
+	}
 }
 
 
 void MapWindow::onActionZoomOut()
 {
-	QPoint vsAnchor = this->mapView->viewport()->rect().center();
-	this->mapView->zoom(vsAnchor, -1.0);
+	QPoint vsAnchor = mapView->viewport()->rect().center();
+	mapView->zoom(vsAnchor, -1.0);
 }
 
 
 void MapWindow::onActionZoomIn()
 {
-	QPoint vsAnchor = this->mapView->viewport()->rect().center();
-	this->mapView->zoom(vsAnchor, +1.0);
+	QPoint vsAnchor = mapView->viewport()->rect().center();
+	mapView->zoom(vsAnchor, +1.0);
 }
 
 
-void MapWindow::onActionRectTool()
+void MapWindow::onGridToolTriggered()
 {
-	this->mapTool = MapTool::Rect;
-	this->h3State->activeIndex = H3_INVALID_INDEX;
-	
-	if(QApplication::focusWidget())
-		QApplication::focusWidget()->clearFocus();
-	
-	this->setAllLineEditEnabled(false);
-	this->clearAllLineEditNoSignal();
-	
-	this->mapView->scene()->invalidate();
+	mapTool = MapTool::Grid;
+	mapView->setInteractionMode(MapView::InteractionMode::Grid);
 }
 
 
-void MapWindow::onActionEditTool()
+void MapWindow::onMarkToolTriggered()
 {
-	this->mapTool = MapTool::Edit;
+	mapTool = MapTool::Mark;
+	mapView->setInteractionMode(MapView::InteractionMode::Cell);
 }
 
 
-void MapWindow::onCellChangedWater()
+void MapWindow::onUnmarkToolTriggered()
 {
-	/* COMMENTO: questo può mai accadere? */
-	if(this->h3State->activeIndex == H3_INVALID_INDEX)
-		return;
-	
-	// If all values would be NaN, remove cell
-	/* COMMENTO: questo può mai accadere? */
-	if(this->editWater->text().isEmpty())
+	mapTool = MapTool::Unmark;
+	mapView->setInteractionMode(MapView::InteractionMode::Cell);
+}
+
+
+void MapWindow::onDatasetListItemCreated(Dataset* dataset)
+{
+	assert(dataset);
+	datasetSaveStates.insert({dataset, DatasetSaveState()});
+}
+
+
+void MapWindow::onDatasetListItemSelected(Dataset* dataset)
+{
+	if(dataset)
 	{
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			if(std::isnan(it->second.ice) && std::isnan(it->second.sediment) && std::isnan(it->second.density))
-				this->h3State->cellsData.erase(it);
-			else
-				it->second.water = DOUBLE_NAN;
-			
-			if(!windowFilePath().isEmpty())
-				setWindowModified(true);
-			this->mapView->scene()->invalidate();
-		}
-		return;
-	}
-	
-	bool   isValidNumber;
-	double value = this->editWater->text().toDouble(&isValidNumber);
-	if(isValidNumber)
-	{
-		// Find item and set value, otherwise make new item with value
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			it->second.water = value;
-		}
-		else
-		{
-			CellData item = CELLDATA_INIT;
-			item.water = value;
-			this->h3State->cellsData[this->h3State->activeIndex] = item;
-		}
 		
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-		this->mapView->scene()->invalidate();
-		// Reset text to actual stored value (in case of conversion weirdness)
-		this->editWater->setText(QString::number(value, 'f', DECIMAL_DIGITS));
-	}
-}
-
-
-void MapWindow::onCellChangedIce()
-{
-	if(this->h3State->activeIndex == H3_INVALID_INDEX)
-		return;
-	
-	// If all values would be NaN, remove cell
-	if(this->editIce->text().isEmpty())
-	{
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			if(std::isnan(it->second.water) && std::isnan(it->second.sediment) && std::isnan(it->second.density))
-				this->h3State->cellsData.erase(it);
-			else
-				it->second.ice = DOUBLE_NAN;
-			
-			if(!windowFilePath().isEmpty())
-				setWindowModified(true);
-			this->mapView->scene()->invalidate();
-		}
-		return;
-	}
-	
-	bool   isValidNumber;
-	double value = this->editIce->text().toDouble(&isValidNumber);
-	if(isValidNumber)
-	{
-		// Find item and set value, otherwise make new item with value
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			it->second.ice = value;
-		}
-		else
-		{
-			CellData item = CELLDATA_INIT;
-			item.ice = value;
-			this->h3State->cellsData[this->h3State->activeIndex] = item;
-		}
 		
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-		this->mapView->scene()->invalidate();
-		// Reset text to actual stored value (in case of conversion weirdness)
-		this->editIce->setText(QString::number(value, 'f', DECIMAL_DIGITS));
-	}
-}
-
-
-void MapWindow::onCellChangedSediment()
-{
-	if(this->h3State->activeIndex == H3_INVALID_INDEX)
-		return;
-	
-	// If all values would be NaN, remove cell
-	if(this->editSediment->text().isEmpty())
-	{
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			if(std::isnan(it->second.water) && std::isnan(it->second.ice) && std::isnan(it->second.density))
-				this->h3State->cellsData.erase(it);
-			else
-				it->second.sediment = DOUBLE_NAN;
-			
-			if(!windowFilePath().isEmpty())
-				setWindowModified(true);
-			this->mapView->scene()->invalidate();
-		}
-		return;
-	}
-	
-	bool   isValidNumber;
-	double value = this->editSediment->text().toDouble(&isValidNumber);
-	if(isValidNumber)
-	{
-		// Find item and set value, otherwise make new item with value
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			it->second.sediment = value;
-		}
-		else
-		{
-			CellData item = CELLDATA_INIT;
-			item.sediment = value;
-			this->h3State->cellsData[this->h3State->activeIndex] = item;
-		}
+		geoValueEditLine->setPlaceholderText(QString::fromStdString(dataset->measureUnit));
+		writeHighlightedGeoValuesIntoLineEdit();
+		if(QApplication::focusWidget() == geoValueEditLine)
+			geoValueEditLine->selectAll();
 		
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-		this->mapView->scene()->invalidate();
-		// Reset text to actual stored value (in case of conversion weirdness)
-		this->editSediment->setText(QString::number(value, 'f', DECIMAL_DIGITS));
-	}
-}
-
-
-void MapWindow::onCellChangedDensity()
-{
-	if(this->h3State->activeIndex == H3_INVALID_INDEX)
-		return;
-	
-	// If all values would be NaN, remove cell
-	if(this->editDensity->text().isEmpty())
-	{
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			if(std::isnan(it->second.water) && std::isnan(it->second.ice) && std::isnan(it->second.sediment))
-				this->h3State->cellsData.erase(it);
-			else
-				it->second.density = DOUBLE_NAN;
-			
-			if(!windowFilePath().isEmpty())
-				setWindowModified(true);
-			this->mapView->scene()->invalidate();
-		}
-		return;
-	}
-	
-	bool   isValidNumber;
-	double value = this->editDensity->text().toDouble(&isValidNumber);
-	if(isValidNumber)
-	{
-		// Find item and set value, otherwise make new item with value
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			it->second.density = value;
-		}
-		else
-		{
-			CellData item = CELLDATA_INIT;
-			item.density = value;
-			this->h3State->cellsData[this->h3State->activeIndex] = item;
-		}
-		
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-		this->mapView->scene()->invalidate();
-		// Reset text to actual stored value (in case of conversion weirdness)
-		this->editDensity->setText(QString::number(value, 'f', DECIMAL_DIGITS));
-	}
-}
-
-
-void MapWindow::onResolutionChanged(int resolution)
-{
-	if(resolution == this->h3State->resolution)
-		return;
-	
-	if(!this->h3State->cellsData.empty())
-	{
-		QApplication::postEvent(this->resolutionSpinbox, new QMouseEvent(QEvent::MouseButtonRelease, QPoint( 0, 0 ), Qt::LeftButton, Qt::NoButton, Qt::NoModifier) );
-		QString title    = QString();
-		QString question = tr("Changing resolution will reset stored data. Proceed?");
-		QMessageBox* box = new QMessageBox(QMessageBox::Question, title, question, QMessageBox::Ok|QMessageBox::Cancel, this);
-		box->setWindowModality(Qt::WindowModal);
-		connect(box, &QMessageBox::finished, this, &MapWindow::onResolutionChangedDialogFinished);
-		box->open();
+		DatasetSaveState& saveState = datasetSaveStates[dataset];
+		setWindowFilePath(QString::fromStdString(saveState.path));
+		setWindowModified(saveState.modified);
 	}
 	else
 	{
-		H3State_reset(this->h3State, resolution);
+		highlightedIndices.clear();
+		gridIndices.clear();
 		
-		this->setAllLineEditEnabled(false);
-		this->clearAllLineEditNoSignal();
+		geoValueEditLine->blockSignals(true);
+		geoValueEditLine->clear();
+		geoValueEditLine->setPlaceholderText("");
+		geoValueEditLine->setEnabled(false);
+		geoValueEditLine->blockSignals(false);
 		
-		this->mapView->scene()->invalidate();
+		setWindowFilePath("");
+		setWindowModified(false);
 	}
+	
+	// NOTE: Setting data source triggers a resolution changed signal that will recompute highlighted cells 
+	datasetControlWidget->setDataSource(dataset);
+	mapView->setDataSource(dataset);
 }
 
 
-void MapWindow::onResolutionChangedDialogFinished(int dialogResult)
+void MapWindow::onDatasetListItemDeleted(Dataset* dataset)
 {
-	if(dialogResult == QMessageBox::Ok)
+	datasetSaveStates.erase(dataset);
+}
+
+
+void MapWindow::onDatasetResolutionChanged(Dataset* dataset, int newResolution)
+{
+	assert(IS_VALID_RESOLUTION(newResolution));
+	assert(dataset->resolution != newResolution);
+	
+	// TODO: Profile this to see if it's worth doing the operation in another thread
+	try
 	{
-		int resolution = this->resolutionSpinbox->value();
-		H3State_reset(this->h3State, resolution);
-		
-		this->setAllLineEditEnabled(false);
-		this->clearAllLineEditNoSignal();
-		
-		if(!windowFilePath().isEmpty())
-			setWindowModified(true);
-		
-		this->mapView->scene()->invalidate();
+		int oldResolution = dataset->resolution;
+		if(newResolution < oldResolution)
+		{
+			// NOTE: We keep this line for future reference just in case Qt feels like being a dick
+//			QApplication::postEvent(this->resolutionSpinbox, new QMouseEvent(QEvent::MouseButtonRelease, QPoint( 0, 0 ), Qt::LeftButton, Qt::NoButton, Qt::NoModifier) );
+			dataset->decreaseResolution(newResolution);
+			onDatasetResolutionDecreased(dataset, oldResolution);
+		}
+		else
+		{
+			dataset->increaseResolution(newResolution);
+			onDatasetResolutionIncreased(dataset, oldResolution);
+		}
+	}
+	catch(std::bad_alloc& ex)
+	{
+		QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to store new values"));
+	}
+	
+	mapView->requestRepaint();
+}
+
+
+void MapWindow::onDatasetResolutionDecreased(Dataset* dataset, int oldResolution)
+{
+	HashSet<H3Index> hlIndices;
+	for(H3Index childIndex : highlightedIndices)
+	{
+		H3Index parentIndex = h3ToParent(childIndex, dataset->resolution);
+		assert(parentIndex != H3_INVALID_INDEX);
+		hlIndices.insert(parentIndex);
+	}
+	this->highlightedIndices = std::move(hlIndices);
+	
+	
+	HashSet<H3Index> gIndices;
+	for(H3Index childIndex : gridIndices)
+	{
+		H3Index parentIndex = h3ToParent(childIndex, dataset->resolution);
+		assert(parentIndex != H3_INVALID_INDEX);
+		gIndices.insert(parentIndex);
+	}
+	gridIndices = std::move(gIndices);
+}
+
+
+void MapWindow::onDatasetResolutionIncreased(Dataset* dataset, int oldResolution)
+{
+	uint64_t childrenBufferLength = h3MaxChildrenCount(oldResolution, dataset->resolution);
+	H3Index* childrenBuffer       = new H3Index[childrenBufferLength];
+	
+	HashSet<H3Index> newHighlightIndices;
+	for(H3Index parentIndex : highlightedIndices)
+	{
+		h3ToChildren(parentIndex, dataset->resolution, childrenBuffer);
+		newHighlightIndices.insert(childrenBuffer, childrenBuffer + childrenBufferLength);
+	}
+	newHighlightIndices.erase(H3_INVALID_INDEX);
+	highlightedIndices = std::move(newHighlightIndices);
+	
+	
+	HashSet<H3Index> newGridIndices;
+	for(H3Index parentIndex : gridIndices)
+	{
+		h3ToChildren(parentIndex, dataset->resolution, childrenBuffer);
+		newGridIndices.insert(childrenBuffer, childrenBuffer + childrenBufferLength);
+	}
+	newGridIndices.erase(H3_INVALID_INDEX);
+	gridIndices = std::move(newGridIndices);
+	
+	delete[] childrenBuffer;
+}
+
+
+void MapWindow::onDatasetDefaultChanged(Dataset* dataset, GeoValue newDefaultValue)
+{
+	assert(datasets);
+	
+	dataset->defaultValue = newDefaultValue;
+}
+
+
+void MapWindow::onDatasetDensityChanged(Dataset* dataset, double value)
+{
+	assert(datasets);
+	
+	assert(dataset->hasDensity());
+	assert(dataset->density != value);
+	dataset->density = value;
+}
+
+
+void MapWindow::onDatasetValueRangeChanged(Dataset* dataset, GeoValue minValue, GeoValue maxValue)
+{
+	assert(datasets);
+	
+	dataset->minValue = minValue;
+	dataset->maxValue = maxValue;
+	mapView->redrawValuesRange();
+	mapView->requestRepaint(); // update colors
+}
+
+
+void MapWindow::onGeoValueEditFinished()
+{
+	Dataset* dataset = datasetListWidget->selection();
+	assert(dataset);
+	
+	size_t affectedCellsCount = 0;
+	if(geoValueEditLine->text().isEmpty())
+	{
+		for(H3Index hlIndex : highlightedIndices)
+		{
+			affectedCellsCount += dataset->removeGeoValue(hlIndex);
+		}
+	}
+	else
+	if(geoValueEditLine->text() == QString::fromUtf8(UI_MULTIPLE_GEOVALUES_STRING))
+	{
+		// Ignore this input
 	}
 	else
 	{
-/* COMMENTO: a cosa servono le due chiamate a <blockSignals> */
-		this->resolutionSpinbox->blockSignals(true);
-		this->resolutionSpinbox->setValue(this->h3State->resolution);
-		this->resolutionSpinbox->blockSignals(false);
+		bool     isValidNumber;
+		GeoValue geoValue = toGeoValue(geoValueEditLine->text(), dataset->isInteger, &isValidNumber);
+		if(isValidNumber)
+		{
+			try
+			{
+				for(H3Index hlIndex : highlightedIndices)
+				{
+					affectedCellsCount += dataset->updateGeoValue(hlIndex, geoValue);
+				}
+			}
+			catch(std::bad_alloc& ex)
+			{
+				QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to store new values"));
+			}
+		}
+	}
+	
+	if(affectedCellsCount > 0)
+	{
+		DatasetSaveState& saveState = datasetSaveStates[dataset];
+		saveState.modified = true;
+		
+		setWindowModified(saveState.modified);
+		mapView->requestRepaint();
 	}
 }
 
 
-void MapWindow::onPolyfillFailed(PolyfillError error)
+void MapWindow::writeHighlightedGeoValuesIntoLineEdit()
 {
-	if(error == PolyfillError::THRESHOLD_EXCEEDED)
+	if(highlightedIndices.size() > 0)
 	{
-		QMessageBox::warning(this, tr("Warning"), tr("Polyfill area too big, Operation aborted to prevent application freezing"));
+		Dataset* dataset = datasetListWidget->selection();
+		assert(dataset);
+		
+		bool     haveAnyValue  = false;
+		bool     haveSameValue = true;
+		bool     emptyCellsExist = false;
+		GeoValue commonGeoValue = {0};
+		
+		for(H3Index index : highlightedIndices)
+		{
+			GeoValue geoValue = {0};
+			if(dataset->findGeoValue(index, &geoValue))
+			{
+				if(!haveAnyValue)
+				{
+					haveAnyValue = true;
+					if(emptyCellsExist)
+					{
+						haveSameValue = false;
+						break;
+					}
+					
+					commonGeoValue = geoValue;
+					continue;
+				}
+				
+				haveSameValue = dataset->geoValuesAreEqual(geoValue, commonGeoValue); 
+			}
+			else
+			{
+				emptyCellsExist = true;
+				haveSameValue = !haveAnyValue;
+			}
+			
+			if(!haveSameValue)
+				break;
+		}
+		
+		QString textGeoValue;
+		if(haveAnyValue)
+		{
+			if(haveSameValue)
+			{
+				if(dataset->isInteger)
+					textGeoValue = QString::number(commonGeoValue.integer);
+				else
+					textGeoValue = QString::number(commonGeoValue.real, 'f', UI_DOUBLE_PRECISION);
+			}
+			else
+			{
+				textGeoValue = QString::fromUtf8(UI_MULTIPLE_GEOVALUES_STRING);
+			}
+		}
+		
+		geoValueEditLine->blockSignals(true);
+		geoValueEditLine->setEnabled(true);
+		geoValueEditLine->setText(textGeoValue);
+		geoValueEditLine->blockSignals(false);
 	}
 	else
-	if(error == PolyfillError::MEMORY_ALLOCATION)
 	{
-		QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to polyfill the selected area"));
+		geoValueEditLine->blockSignals(true);
+		geoValueEditLine->clear();
+		geoValueEditLine->setEnabled(false);
+		geoValueEditLine->blockSignals(false);
 	}
 }
 
 
-void MapWindow::highlightCell(H3Index index)
+void MapWindow::onMapViewMouseMove(QMouseEvent* event)
 {
-	// NOTE: Should we handle this case?
+	assert(datasets);
+	
+	QPointF scenePoint       = mapView->mapToScene(event->pos());
+	bool    mouseIsInsideMap = mapView->sceneRect().contains(scenePoint); 
+	if(mouseIsInsideMap)
+	{
+		// Update mouse coorinates in status bar
+		GeoCoord mouseGeoCoord = toGeoCoord(scenePoint, mapView->sceneRect().size());
+		QString message = QString::fromUtf8("%1 : %2")
+			.arg(radsToDegs(mouseGeoCoord.lon))
+			.arg(radsToDegs(mouseGeoCoord.lat));
+		statusLabel->setText(message);
+	}
+}
+
+
+void MapWindow::onMapViewCellSelected(H3Index index)
+{
+	assert(datasets);
 	assert(index != H3_INVALID_INDEX);
 	
-	if(this->h3State->activeIndex != index)
-	{
-		this->h3State->activeIndex = index;
-		this->mapView->scene()->invalidate();
+	if(mapTool == MapTool::Mark)
+		highlightedIndices.insert(index);
+	else if(mapTool == MapTool::Unmark)
+		highlightedIndices.erase(index);
 		
-		this->setAllLineEditEnabled(true);
+	writeHighlightedGeoValuesIntoLineEdit();
+	if(QApplication::focusWidget() == geoValueEditLine)
+		geoValueEditLine->selectAll();
+	mapView->requestRepaint();
+}
+
+
+void MapWindow::onMapViewAreaSelected(QRectF area)
+{
+	assert(datasets);
+	
+	Dataset* dataset = datasetListWidget->selection();
+	if(!dataset)
+		return;
+	
+	GeoCoord geoCorners[4];
+	toGeoCoord(area, mapView->sceneRect().size(), geoCorners);
+	
+	GeoPolygon geoPolygon        = {};
+	geoPolygon.geofence.numVerts = 4;
+	geoPolygon.geofence.verts    = geoCorners;
+	uint64_t polyfillIndicesCount = maxPolyfillSize(&geoPolygon, dataset->resolution);
+	
+	if(polyfillIndicesCount < POLYFILL_INDEX_THRESHOLD)
+	{
+		try
+		{
+			H3Index* buffer = new H3Index[polyfillIndicesCount];
+			polyfill(&geoPolygon, dataset->resolution, buffer);
+			gridIndices.clear();
+			gridIndices.insert(buffer, buffer+polyfillIndicesCount);
+			gridIndices.erase(H3_INVALID_INDEX);
+			delete[] buffer;
+		}
+		catch(std::bad_alloc& ex)
+		{
+			QMessageBox::critical(this, tr("Error"), tr("Not enough memory to polyfill the selected area"));
+		}
 		
-		auto it = this->h3State->cellsData.find(this->h3State->activeIndex);
-		if(it != this->h3State->cellsData.end())
-		{
-			QString text;
-			text = std::isnan(it->second.water)    ? QString() : QString::number(it->second.water,    'f', DECIMAL_DIGITS);
-			this->editWater->blockSignals(true);
-			this->editWater->setText(text);
-			this->editWater->blockSignals(false);
-			
-			text = std::isnan(it->second.ice)      ? QString() : QString::number(it->second.ice,      'f', DECIMAL_DIGITS);
-			this->editIce->blockSignals(true);
-			this->editIce->setText(text);
-			this->editIce->blockSignals(false);
-			
-			text = std::isnan(it->second.sediment) ? QString() : QString::number(it->second.sediment, 'f', DECIMAL_DIGITS);
-			this->editSediment->blockSignals(true);
-			this->editSediment->setText(text);
-			this->editSediment->blockSignals(false);
-			
-			text = std::isnan(it->second.density)  ? QString() : QString::number(it->second.density,  'f', DECIMAL_DIGITS);
-			this->editDensity->blockSignals(true);
-			this->editDensity->setText(text);
-			this->editDensity->blockSignals(false);
-		}
-		else
-		{
-			this->clearAllLineEditNoSignal();
-		}
+		mapView->requestRepaint();
+	}
+	else
+	{
+		QString message      = tr("Area too large. Operation aborted to prevent application freeze");
+		int     milliseconds = 10000;
+		statusBar()->showMessage(message, milliseconds);
+	}
+}
+
+
+Dataset* MapWindow::deserializeDataset(const std::string& path)
+{
+	std::ifstream stream(path);
+	if(!stream.is_open())
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Cannot open %1 for reading").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+		return nullptr;
+	}
+	
+	
+	std::shared_ptr<cpptoml::table> root = nullptr;
+	try
+	{
+		cpptoml::parser parser(stream);
+		root = parser.parse();
+		stream.close();
+	}
+	catch(cpptoml::parse_exception& ex)
+	{
+		stream.close();
 		
-		QLineEdit* focused = dynamic_cast<QLineEdit*>(QApplication::focusWidget());
-		if(focused)
-		{
-			focused->selectAll();
-		}
-		else
-		{
-			this->editWater->setFocus();
-			this->editWater->selectAll();
-		}
-	}
-}
-
-
-bool MapWindow::handleMapEventMousePress(MapView* mapView, QMouseEvent* event)
-{
-	if(this->mapTool == MapTool::Edit)
-	{
-		if(event->button() == Qt::MouseButton::LeftButton)
-		{
-			QPointF scenePoint = mapView->mapToScene(event->pos());
-			if(mapView->sceneRect().contains(scenePoint))
-			{
-				GeoCoord coord = toGeocoord(scenePoint, mapView->sceneRect().size());
-				H3Index  index = geoToH3(&coord, this->h3State->resolution);
-				if(index != H3_INVALID_INDEX)
-				{
-					this->highlightCell(index);
-				}
-			}
-			return true;
-		}
-	}
-	return false;
-}
-
-
-bool MapWindow::handleMapEventMouseMove(MapView* mapView, QMouseEvent* event)
-{
-	QPointF scenePoint = mapView->mapToScene(event->pos());
-	if(mapView->sceneRect().contains(scenePoint))
-	{
-		GeoCoord c = toGeocoord(scenePoint, mapView->sceneRect().size());
-		QString message = QString::fromUtf8("%1 : %2").arg(radsToDegs(c.lon)).arg(radsToDegs(c.lat));
-		this->statusLabel->setText(message);
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Error while parsing '%1'").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+		return nullptr;
 	}
 	
-	if(this->mapTool == MapTool::Edit)
+	
+	if(!root->contains_qualified("h3.resolution"))
 	{
-		if(event->buttons() & Qt::MouseButton::LeftButton)
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Warning"));
+		dialog->setText(tr("File: %1 is missing the 'resolution' attribute").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Default '0' will be used"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+	}
+	
+	if(!root->contains_qualified("h3.values"))
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Warning"));
+		dialog->setText(tr("File: %1 is missing the 'values' list").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Default empty list will be used"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+	}
+	
+	
+	std::string datasetName = root->get_qualified_as<std::string>("giagui.name").value_or("");
+	if(datasetName.empty())
+	{
+		// NOTE: Use synchronous dialog because async is a huge pain
+		QInputDialog dialog(this);
+		dialog.setInputMode(QInputDialog::TextInput);
+		dialog.setLabelText(tr("Enter name for the dataset"));
+		dialog.setTextValue(QFileInfo(QString::fromStdString(path)).baseName());
+		dialog.setCancelButtonText(tr("Abort"));
+//		dialog.setAttribute(Qt::WA_DeleteOnClose);
+		int resultCode = dialog.exec();
+		if(resultCode != QDialog::Accepted)
+			return nullptr;
+		datasetName = dialog.textValue().toStdString();
+	}
+	
+	return deserializeDataset(path, root, datasetName);
+}
+
+
+Dataset* MapWindow::deserializeDataset(const std::string& path, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName)
+{
+	Dataset* dataset = nullptr;
+	try
+	{
+		dataset = new Dataset(datasetName);
+	}
+	catch(std::bad_alloc& ex)
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Memory allocation error"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+		return nullptr;
+	}
+	
+	dataset->resolution  = root->get_qualified_as<int>("h3.resolution").value_or(0);
+	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("").back() != 'f';
+	if(dataset->isInteger)
+		dataset->defaultValue.integer = root->get_qualified_as<int64_t>("h3.default").value_or(0);
+	else
+		dataset->defaultValue.real    = root->get_qualified_as<double>("h3.default").value_or(0);
+	dataset->density     = root->get_qualified_as<double>("h3.density").value_or(Dataset::NO_DENSITY);
+	dataset->measureUnit = "";
+	dataset->minValue    = {0};
+	dataset->maxValue    = {0};
+	
+	if(dataset->isInteger)
+	{
+		for(auto& [key, val] : *root->get_table_qualified("h3.values"))
 		{
-			if(mapView->sceneRect().contains(scenePoint))
-			{
-				GeoCoord coord = toGeocoord(scenePoint, mapView->sceneRect().size());
-				H3Index  index = geoToH3(&coord, this->h3State->resolution);
-				if(index != H3_INVALID_INDEX)
-				{
-					this->highlightCell(index);
-				}
-			}
-			return true;
+			H3Index  index    = std::stoull(key, nullptr, 16);
+			GeoValue geoValue = {0};
+			geoValue.integer = val->as<int64_t>()->get();
+			dataset->geoValues.insert({index, geoValue});
+				
+			if(dataset->minValue.integer > geoValue.integer)
+				dataset->minValue.integer = geoValue.integer;
+			if(dataset->maxValue.integer < geoValue.integer)
+				dataset->maxValue.integer = geoValue.integer;
 		}
 	}
-	return false;
-}
-
-
-bool MapWindow::handleMapEventMouseRelease(MapView* mapView, QMouseEvent* event)
-{
-	if(this->mapTool == MapTool::Edit)
+	else
 	{
-		if(event->button() == Qt::MouseButton::LeftButton)
+		for(auto& [key, val] : *root->get_table_qualified("h3.values"))
 		{
-			return true;
+			H3Index  index    = std::stoull(key, nullptr, 16);
+			GeoValue geoValue = {0};
+			geoValue.real = val->as<double>()->get();
+			dataset->geoValues.insert({index, geoValue});
+			
+			if(dataset->minValue.real > geoValue.real)
+				dataset->minValue.real = geoValue.real;
+			if(dataset->maxValue.real < geoValue.real)
+				dataset->maxValue.real = geoValue.real;
 		}
 	}
-	return false;
+	
+	return dataset;
 }
 
 
-void MapWindow::setAllLineEditEnabled(bool enabled)
+bool MapWindow::serializeDataset(const std::string& path, Dataset* dataset)
 {
-	this->editWater->setEnabled(enabled);
-	this->editIce->setEnabled(enabled);
-	this->editSediment->setEnabled(enabled);
-	this->editDensity->setEnabled(enabled);
-}
+	if(path.empty())
+		return false;
 
-
-void MapWindow::clearAllLineEditNoSignal()
-{
-	this->editWater->blockSignals(true);
-	this->editWater->clear();
-	this->editWater->blockSignals(false);
+	std::ofstream stream(path);
+	if(!stream.is_open())
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("File open error"));
+		dialog->setInformativeText(tr("Cannot open %1 for writing").arg(QString::fromStdString(path)));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+		return false;
+	}
+	stream << std::fixed << std::showpoint;
 	
-	this->editIce->blockSignals(true);
-	this->editIce->clear();
-	this->editIce->blockSignals(false);
 	
-	this->editSediment->blockSignals(true);
-	this->editSediment->clear();
-	this->editSediment->blockSignals(false);
+	stream << "[giagui]"                       << std::endl;
+	stream << "name = '" << dataset->id << "'" << std::endl;
+	stream << std::endl;
 	
-	this->editDensity->blockSignals(true);
-	this->editDensity->clear();
-	this->editDensity->blockSignals(false);
+	
+	stream << "[h3]" << std::endl;
+	stream << "resolution = "  << dataset->resolution << std::endl;
+	
+	if(dataset->isInteger)
+	{
+		stream << "type = '1i'"                                 << std::endl;
+		stream << "default = " << dataset->defaultValue.integer << std::endl;
+	}
+	else
+	{
+		stream << "type = '1f'"                              << std::endl;
+		stream << "default = " << dataset->defaultValue.real << std::endl;
+	}
+	
+	if(dataset->hasDensity())
+	{
+		stream << "density = " << dataset->density << std::endl;
+	}
+	stream << std::endl;
+	
+	
+	stream << "[h3.values]" << std::endl;
+	if(dataset->isInteger)
+	{
+		for(auto [index, geoValue] : dataset->geoValues)
+		{
+			stream << std::hex << index;
+			stream << " = ";
+			stream << std::dec << geoValue.integer;
+			stream << std::endl;
+		}
+	}
+	else
+	{
+		for(auto [index, geoValue] : dataset->geoValues)
+		{
+			stream << std::hex << index;
+			stream << " = ";
+			stream << geoValue.real;
+			stream << std::endl;
+		}
+	}
+	
+	
+	if(stream.fail())
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Error while writing data to %1").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Operation aborted, data may be corrupted").arg(QString::fromStdString(path)));
+		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->open();
+		return false;
+	}
+	return true;
 }

@@ -5,7 +5,7 @@
 <style type="text/css">
 .country {
 	opacity:1;
-	fill:#999999;
+	fill:#CCCCCC;
 	fill-opacity:1;
 	fill-rule:evenodd;
 	stroke:none;
@@ -18,7 +18,7 @@ Example for painting countries:
 */
 </style>
 
-<rect id="background" width="720" height="360" fill="#a7cdf2"/>
+<rect id="background" width="720" height="360" fill="#a7cdf2" opacity="0.3"/>
 
 <g id="positioner" transform="translate(360, 180) scale(2, -2)">
 

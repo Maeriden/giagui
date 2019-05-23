@@ -1,10 +1,13 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
 	<qresource>
-		<file>images/icon-rect.svg</file>
+		<file>images/icon-grid.svg</file>
 	</qresource>
 	<qresource>
-		<file>images/icon-edit.svg</file>
+		<file>images/icon-cell-mark.svg</file>
+	</qresource>
+	<qresource>
+		<file>images/icon-cell-unmark.svg</file>
 	</qresource>
 	<qresource>
 		<file>images/world.svg</file>
