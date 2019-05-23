@@ -620,9 +620,6 @@ void MapView::mouseMoveEvent(QMouseEvent* event)
 
 void MapView::mouseReleaseEvent(QMouseEvent* event)
 {
-	if(!dataset)
-		return;
-	
 	if(event->button() == Qt::LeftButton)
 	{
 		event->accept();
