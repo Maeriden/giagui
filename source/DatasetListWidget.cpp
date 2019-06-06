@@ -90,9 +90,10 @@ void DatasetListWidget::keyPressEvent(QKeyEvent* event)
 void DatasetListWidget::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous)
 {
 	assert(current != previous);
-	Dataset* dataset = selection();
-	deleteButton->setEnabled(dataset != nullptr);
-	emit itemSelected(dataset);
+	Dataset* currentDataset  = datasets->get(current);
+	Dataset* previousDataset = datasets->get(previous);
+	deleteButton->setEnabled(currentDataset != nullptr);
+	emit itemSelected(currentDataset, previousDataset);
 }
 
 
@@ -188,7 +189,7 @@ void DatasetListWidget::onDeleteDatasetDialogFinished(int resultCode)
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
 		dialog->setText(tr("Dataset deletion failed"));
-		dialog->setInformativeText(tr("Dataset was not found among the current datasets"));
+		dialog->setInformativeText(tr("Dataset was not found among the current datasetsModel"));
 		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		dialog->open();
 	}

@@ -38,12 +38,8 @@ QVariant DatasetListModel::data(const QModelIndex& index, int role) const
 	if(role != Qt::ItemDataRole::DisplayRole && role != Qt::ItemDataRole::EditRole)
 		return QVariant();
 	
-	Dataset* item = items[index.row()];
-	switch(index.column())
-	{
-		case 0: return QString::fromStdString(item->id);
-	}
-	return QVariant();
+	Dataset* dataset = *std::next(items.begin(), index.row());
+	return QString::fromStdString(dataset->id);
 }
 
 
@@ -58,11 +54,8 @@ bool DatasetListModel::setData(const QModelIndex& index, const QVariant& value, 
 	if(role != Qt::ItemDataRole::EditRole)
 		return false;
 	
-	Dataset* item = items[index.row()];
-	switch(index.column())
-	{
-		case 0:  item->id = value.toString().toStdString();
-	}
+	Dataset* dataset = *std::next(items.begin(), index.row());
+	dataset->id = value.toString().toStdString();
 	return true;
 }
 
@@ -75,8 +68,9 @@ Qt::ItemFlags DatasetListModel::flags(const QModelIndex& index) const
 
 bool DatasetListModel::insertRows(int row, int count, const QModelIndex& parent)
 {
-	beginInsertRows(QModelIndex(), row, row);
-	items.insert(items.begin()+row, count, nullptr);
+	beginInsertRows(parent, row, row);
+	auto position = std::next(items.begin(), row);
+	items.insert(position, count, nullptr);
 	endInsertRows();
 	return true;
 }
@@ -86,8 +80,9 @@ bool DatasetListModel::removeRows(int row, int count, const QModelIndex& parent)
 {
 	if(0 <= row && row < (int)items.size())
 	{
-		beginRemoveRows(QModelIndex(), row, row);
-		items.erase(items.begin()+row, items.begin()+row+count);
+		beginRemoveRows(parent, row, row);
+		auto position = std::next(items.begin(), row);
+		items.erase(position, std::next(position, count));
 		endRemoveRows();
 		return true;
 	}
@@ -95,16 +90,34 @@ bool DatasetListModel::removeRows(int row, int count, const QModelIndex& parent)
 }
 
 
-Dataset* DatasetListModel::get(const QModelIndex& modelIndex)
+void DatasetListModel::reset(std::list<Dataset*>&& newItems)
 {
-	assert(modelIndex.isValid());
-	int row = modelIndex.row();
+	beginResetModel();
+	for(Dataset* dataset : items)
+		delete dataset;
+	this->items = newItems;
+	endResetModel();
+}
+
+
+Dataset* DatasetListModel::get(int row)
+{
 	if(0 <= row && row < (int)items.size())
 	{
-		Dataset* dataset = items[row];
+		Dataset* dataset = *std::next(items.begin(), row);
 		return dataset;
 	}
 	return nullptr;
+}
+
+
+Dataset* DatasetListModel::get(const QModelIndex& modelIndex)
+{
+	if(!modelIndex.isValid())
+		return nullptr;
+	if(modelIndex.model() != this)
+		return nullptr;
+	return get(modelIndex.row());
 }
 
 
@@ -113,44 +126,36 @@ QModelIndex DatasetListModel::findIndex(Dataset* dataset)
 	auto iter = std::find(items.begin(), items.end(), dataset);
 	if(iter != items.end())
 	{
-		int row = iter - items.begin();
-		QModelIndex result = createIndex(row, 0, dataset);
+		int row = std::distance(items.begin(), iter);
+		QModelIndex result = createIndex(row, 0, *iter);
 		return result;
 	}
-	return createIndex(-1, 0, nullptr);
+	return QModelIndex();
 }
 
 
 bool DatasetListModel::appendItem(Dataset* dataset)
 {
-	assert(dataset);
-	bool result = insertRows(items.size(), 1, QModelIndex());
-	items.back() = dataset;
-	return result;
+	int row = items.size();
+	
+	beginInsertRows(QModelIndex(), row, row);
+	items.push_back(dataset);
+	endInsertRows();
+	return true;
 }
 
 
 bool DatasetListModel::removeItem(Dataset* dataset)
 {
-	bool result = false;
-	auto iter = std::find(items.begin(), items.end(), dataset);
-	if(iter != items.end())
+	auto position = std::find(items.begin(), items.end(), dataset);
+	if(position != items.end())
 	{
-		int row = iter - items.begin();
-		assert(0 <= row && row < (int)items.size());
-		result = removeRows(row, 1, QModelIndex());
+		int row = std::distance(items.begin(), position);
+		
+		beginRemoveRows(QModelIndex(), row, row);
+		items.erase(position);
+		endRemoveRows();
+		return true;
 	}
-	return result;
-}
-
-
-DatasetListModel::Iterator DatasetListModel::begin()
-{
-	return items.begin();
-}
-
-
-DatasetListModel::Iterator DatasetListModel::end()
-{
-	return items.end();
+	return false;
 }

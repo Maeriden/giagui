@@ -254,7 +254,7 @@ void drawBoundary(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSiz
 		for(int i = 0; i < geoBoundary->numVerts; ++i)
 			points[i] = toMapCoord(geoBoundary->verts[i], surfaceSize);
 		painter->drawConvexPolygon(points, geoBoundary->numVerts);
-		
+
 #if ENABLE_DEBUG_DRAW_GEOBOUNDARY_VERTICES
 		QFont font = painter->font();
 		font.setPointSizeF(font.pointSizeF() * 0.4);
@@ -284,7 +284,6 @@ void drawBoundary(QPainter* painter, GeoBoundary* geoBoundary, QSizeF surfaceSiz
 
 void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 {
-#if 1
 	if(!dataset)
 		return;
 	
@@ -325,11 +324,9 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 	
 	if(gridIndices)
 	{
-		float penStrokeWidth = getLineThickness(dataset->resolution);
-		polyfillPen.setWidthF(penStrokeWidth);
-		
-		painter->setPen(polyfillPen);
-		painter->setBrush(polyfillBrush);
+		painter->setPen(gridPen);
+		painter->setBrush(gridBrush);
+		painter->setRenderHint(QPainter::Antialiasing);
 		
 		for(H3Index index : *gridIndices)
 		{
@@ -343,9 +340,7 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 	
 	if(highlightIndices)
 	{
-		float penStrokeWidth = 2 * getLineThickness(dataset->resolution);
-		highlightPen.setWidthF(penStrokeWidth);
-		
+		highlightPen.setWidthF(2);
 		painter->setPen(highlightPen);
 		painter->setBrush(highlightBrush);
 		
@@ -356,45 +351,22 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 			h3ToGeoBoundary(index, &geoBoundary);
 			drawBoundary(painter, &geoBoundary, mapSize);
 		}
-	}
-#else
-	if(geoDataset && geoDataset->geoValues.size() > 0)
-	{
-		qreal penStrokeWidth = getLineThickness(geoDataset->resolution);
-		datasetPen.setWidthF(penStrokeWidth);
-		polyfillPen.setWidthF(penStrokeWidth);
-		highlightPen.setWidthF(penStrokeWidth);
 		
+#if !DISABLE_DRAW_HIGHLIGHTED_INDICES_CENTER
+		highlightPen.setWidthF(4);
+		painter->setPen(highlightPen);
 		
-		QSizeF mapSize = this->mapSize();
-		GeoBoundary geoBoundary;
-		for(auto [index, geoValue] : geoDataset->geoValues)
+		for(H3Index index : *highlightIndices)
 		{
 			assert(index != H3_INVALID_INDEX);
-			h3ToGeoBoundary(index, &geoBoundary);
 			
-			painter->setBrush(datasetBrush);
-			painter->setPen(datasetPen);
-			drawBoundary(painter, &geoBoundary, mapSize);
-			
-			
-			if(gridIndices && gridIndices->count(index) > 0)
-			{
-				painter->setBrush(polyfillBrush);
-				painter->setPen(polyfillPen);
-				drawBoundaryEdges(painter, &geoBoundary, mapSize);
-			}
-			
-			
-			if(highlightIndices && highlightIndices->count(index) > 0)
-			{
-				painter->setBrush(highlightBrush);
-				painter->setPen(highlightPen);
-				drawBoundary(painter, &geoBoundary, mapSize);
-			}
+			GeoCoord geoCenter;
+			h3ToGeo(index, &geoCenter);
+			QPointF center = toMapCoord(geoCenter, mapSize);
+			painter->drawPoint(center);
 		}
-	}
 #endif
+	}
 }
 
 
@@ -409,6 +381,11 @@ MapView::MapView(HashSet<H3Index>* highlightIndices, HashSet<H3Index>* gridIndic
 	
 	mapGraphicsItem = new QGraphicsSvgItem(":/images/world.svg");
 	scene->addItem(mapGraphicsItem);
+	
+	gridPen.setCosmetic(true);
+	gridPen.setDashPattern({8, 8});
+	
+	highlightPen.setCosmetic(true);
 }
 
 
@@ -451,6 +428,7 @@ void MapView::redrawValuesRange()
 {
 	assert(dataset);
 	
+	// TODO: Find out how to draw a screen-space floating rect with a gradient
 //	QLinearGradient gradient = QLinearGradient(QPointF(), QPointF());
 //	QColor minColor = dataset->isInteger ? getGeoValueColor(dataset->minValue.integer) : getGeoValueColor(dataset->minValue.real);
 //	QColor maxColor = dataset->isInteger ? getGeoValueColor(dataset->maxValue.integer) : getGeoValueColor(dataset->maxValue.real);

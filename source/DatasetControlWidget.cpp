@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
+#include <QtWidgets/QMessageBox>
 
 #include "Dataset.hpp"
 #include "MapUtils.hpp"
@@ -96,17 +97,17 @@ void DatasetControlWidget::setDataSource(Dataset* dataset)
 	if(this->dataset == dataset)
 		return;
 	this->dataset = dataset;
-	refreshViews();
+	refreshViews(dataset);
 }
 
 
-void DatasetControlWidget::refreshViews()
+void DatasetControlWidget::refreshViews(Dataset* dataset)
 {
-	resolutionSpinBox->blockSignals(true);
-	defaultLineEdit->blockSignals(true);
-	densityLineEdit->blockSignals(true);
-	minValueLineEdit->blockSignals(true);
-	maxValueLineEdit->blockSignals(true);
+//	resolutionSpinBox->blockSignals(true);
+//	defaultLineEdit->blockSignals(true);
+//	densityLineEdit->blockSignals(true);
+//	minValueLineEdit->blockSignals(true);
+//	maxValueLineEdit->blockSignals(true);
 	
 	if(dataset)
 	{
@@ -168,20 +169,36 @@ void DatasetControlWidget::refreshViews()
 		maxValueLineEdit->setEnabled(false);
 	}
 	
-	resolutionSpinBox->blockSignals(false);
-	defaultLineEdit->blockSignals(false);
-	densityLineEdit->blockSignals(false);
-	minValueLineEdit->blockSignals(false);
-	maxValueLineEdit->blockSignals(false);
+//	resolutionSpinBox->blockSignals(false);
+//	defaultLineEdit->blockSignals(false);
+//	densityLineEdit->blockSignals(false);
+//	minValueLineEdit->blockSignals(false);
+//	maxValueLineEdit->blockSignals(false);
 }
 
 
-void DatasetControlWidget::onResolutionSpinboxChanged(int value)
+void DatasetControlWidget::onResolutionSpinboxChanged(int newResolution)
 {
 	assert(dataset);
+	assert(IS_VALID_RESOLUTION(newResolution));
 	
-	if(dataset->resolution != value)
-		emit resolutionChanged(dataset, value);
+	if(dataset->resolution != newResolution)
+	{
+		int oldResolution = dataset->resolution;
+		try
+		{
+			if(newResolution < oldResolution)
+				dataset->decreaseResolution(newResolution);
+			else
+				dataset->increaseResolution(newResolution);
+		}
+		catch(std::bad_alloc& ex)
+		{
+			QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to store new values"));
+			// TODO: Let application crash? Data consistency is not enforced anyway
+		}
+		emit resolutionChanged(dataset, oldResolution);
+	}
 }
 
 
@@ -191,11 +208,15 @@ void DatasetControlWidget::onDefaultEditFinished()
 	QString text = defaultLineEdit->text();
 	
 	bool isValidNumber;
-	GeoValue value = toGeoValue(text, dataset->isInteger, &isValidNumber);
+	GeoValue newValue = toGeoValue(text, dataset->isInteger, &isValidNumber);
 	if(isValidNumber)
 	{
-		if(!dataset->geoValuesAreEqual(dataset->defaultValue, value))
-			emit defaultChanged(dataset, value);
+		if(!dataset->geoValuesAreEqual(dataset->defaultValue, newValue))
+		{
+			GeoValue oldValue = dataset->defaultValue;
+			dataset->defaultValue = newValue;
+			emit defaultChanged(dataset, oldValue);
+		}
 	}
 }
 
@@ -207,11 +228,15 @@ void DatasetControlWidget::onDensityEditFinished()
 	QString text = densityLineEdit->text();
 	
 	bool isValidNumber;
-	double value = text.toDouble(&isValidNumber);
+	double newValue = text.toDouble(&isValidNumber);
 	if(isValidNumber)
 	{
-		if(dataset->density != value)
-			emit densityChanged(dataset, value);
+		if(dataset->density != newValue)
+		{
+			double oldValue = dataset->density;
+			dataset->density = newValue;
+			emit densityChanged(dataset, oldValue);
+		}
 	}
 }
 
@@ -230,6 +255,8 @@ void DatasetControlWidget::onMinValueEditFinished()
 		GeoValue maxValue = toGeoValue(textMax, dataset->isInteger, &isValidNumber);
 		if(isValidNumber)
 		{
+			bool anythingChanged = false;
+			
 			if(dataset->isInteger)
 			{
 				if(maxValue.integer < minValue.integer)
@@ -241,9 +268,8 @@ void DatasetControlWidget::onMinValueEditFinished()
 					maxValueLineEdit->blockSignals(false);
 				}
 				
-				if(dataset->minValue.integer != minValue.integer
-				|| dataset->maxValue.integer != maxValue.integer)
-					emit valueRangeChanged(dataset, minValue, maxValue);
+				anythingChanged = dataset->minValue.integer != minValue.integer
+				               || dataset->maxValue.integer != maxValue.integer;
 			}
 			else
 			{
@@ -256,9 +282,17 @@ void DatasetControlWidget::onMinValueEditFinished()
 					maxValueLineEdit->blockSignals(false);
 				}
 				
-				if(dataset->minValue.real != minValue.real
-				|| dataset->maxValue.real != maxValue.real)
-					emit valueRangeChanged(dataset, minValue, maxValue);
+				anythingChanged = dataset->minValue.real != minValue.real
+				               || dataset->maxValue.real != maxValue.real;
+			}
+			
+			if(anythingChanged)
+			{
+				GeoValue oldMinValue = dataset->minValue;
+				GeoValue oldMaxValue = dataset->maxValue;
+				dataset->minValue = minValue;
+				dataset->maxValue = maxValue;
+				emit valueRangeChanged(dataset, oldMinValue, oldMaxValue);
 			}
 		}
 	}
@@ -279,6 +313,8 @@ void DatasetControlWidget::onMaxValueEditFinished()
 		GeoValue maxValue = toGeoValue(textMax, dataset->isInteger, &isValidNumber);
 		if(isValidNumber)
 		{
+			bool anythingChanged = false;
+			
 			if(dataset->isInteger)
 			{
 				if(minValue.integer > maxValue.integer)
@@ -290,9 +326,8 @@ void DatasetControlWidget::onMaxValueEditFinished()
 					minValueLineEdit->blockSignals(false);
 				}
 				
-				if(dataset->minValue.integer != minValue.integer
-				|| dataset->maxValue.integer != maxValue.integer)
-					emit valueRangeChanged(dataset, minValue, maxValue);
+				anythingChanged = dataset->minValue.integer != minValue.integer
+				               || dataset->maxValue.integer != maxValue.integer;
 			}
 			else
 			{
@@ -305,9 +340,17 @@ void DatasetControlWidget::onMaxValueEditFinished()
 					minValueLineEdit->blockSignals(false);
 				}
 				
-				if(dataset->minValue.real != minValue.real
-				|| dataset->maxValue.real != maxValue.real)
-					emit valueRangeChanged(dataset, minValue, maxValue);
+				anythingChanged = dataset->minValue.real != minValue.real
+				               || dataset->maxValue.real != maxValue.real;
+			}
+			
+			if(anythingChanged)
+			{
+				GeoValue oldMinValue = dataset->minValue;
+				GeoValue oldMaxValue = dataset->maxValue;
+				dataset->minValue = minValue;
+				dataset->maxValue = maxValue;
+				emit valueRangeChanged(dataset, oldMinValue, oldMaxValue);
 			}
 		}
 	}

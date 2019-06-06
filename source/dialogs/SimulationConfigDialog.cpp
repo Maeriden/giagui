@@ -1,25 +1,37 @@
+#include <utility>
+
+#include <utility>
+
 #include "SimulationConfigDialog.hpp"
 
 #include <QKeyEvent>
 #include <QValidator>
 #include <QLabel>
 #include <QLineEdit>
+#include <QComboBox>
 #include <QPushButton>
 #include <QToolButton>
 #include <QAction>
 #include <QGroupBox>
+#include <QListView>
 #include <QTableView>
 #include <QFileDialog>
 #include <QGridLayout>
 #include <QHeaderView>
 #include <QDialogButtonBox>
 #include <QSortFilterProxyModel>
+#include <QStyledItemDelegate>
 #include <QDebug>
 
-
+#include <source/Dataset.hpp>
+#include "models/DatasetListModel.hpp"
 #include "models/GeoHistoryModel.hpp"
 
 
+using HistoryEntry = SimulationConfig::Load::HistoryEntry;
+
+
+// Allows not setting a value
 struct OptionalIntValidator : public QIntValidator
 {
 	inline OptionalIntValidator(int bottom, int top, QObject* parent = nullptr) : QIntValidator(bottom, top, parent) {}
@@ -28,21 +40,270 @@ struct OptionalIntValidator : public QIntValidator
 		if(input.isEmpty())
 			return QValidator::State::Acceptable;
 		return QIntValidator::validate(input, pos);
-//		bool ok;
-//		int number = input.toInt(&ok, 10);
-//		if(ok)
-//			if(bottom() <= number && number <= top())
-//				return QValidator::State::Acceptable;
-//		return QValidator::State::Invalid;
 	}
 };
 
 
-
-
-SimulationConfigDialog::SimulationConfigDialog(QWidget* parent) : QDialog(parent)
+// Creates a blank item mapped to not setting a value
+struct MeshInputProxyModel : public QAbstractListModel
 {
-	historyModel = new GeoHistoryModel(this);
+	std::list<Dataset*> items;
+	
+	
+	explicit MeshInputProxyModel(DatasetListModel* source, QObject* parent = nullptr) : QAbstractListModel(parent)
+	{
+		for(Dataset* dataset : *source)
+			if(dataset->isInteger)
+				items.push_back(dataset);
+	}
+	
+	int rowCount(const QModelIndex& parent) const override
+	{
+		int result = 1 + items.size();
+		return result;
+	}
+	
+	QVariant data(const QModelIndex& index, int role) const override
+	{
+		if(role == Qt::DisplayRole || role == Qt::EditRole)
+		{
+			if(index.row() > 0)
+			{
+				Dataset* dataset = *std::next(items.begin(), index.row() - 1);
+				return QString::fromStdString(dataset->id);
+			}
+		}
+		
+		if(role == Qt::UserRole)
+		{
+			if(index.row() > 0)
+			{
+				Dataset* dataset = *std::next(items.begin(), index.row() - 1);
+				return QVariant::fromValue(dataset);
+			}
+			return QVariant::fromValue(nullptr);
+		}
+		
+		return QVariant();
+	}
+	
+	
+	using Iterator = decltype(items)::iterator;
+	inline Iterator begin() { return items.begin(); }
+	inline Iterator end()   { return items.end();   }
+};
+
+
+struct TimesModel : public QAbstractListModel
+{
+	std::list<HistoryEntry> items;
+	
+	
+	explicit TimesModel(std::list<HistoryEntry> times, QObject* parent = nullptr) : QAbstractListModel(parent)
+	{
+		this->items = std::move(times);
+	}
+	
+	int rowCount()                          const          { return items.size(); }
+	int rowCount(const QModelIndex& parent) const override { return rowCount();   }
+	
+	QVariant data(const QModelIndex& index, int role) const override
+	{
+		if(index.row() < 0 || items.size() <= (size_t)index.row())
+			return QVariant();
+		if(role != Qt::DisplayRole && role != Qt::EditRole)
+			return QVariant();
+		
+		return std::next(items.begin(), index.row())->time;
+	}
+	
+	bool setData(const QModelIndex& index, const QVariant& value, int role) override
+	{
+		if(index.row() < 0 || items.size() <= (size_t)index.row())
+			return false;
+		if(role != Qt::ItemDataRole::EditRole)
+			return false;
+		
+		bool ok;
+		double time = value.toDouble(&ok);
+		if(!ok)
+			return false;
+		std::next(items.begin(), index.row())->time = time; 
+		return true;
+	}
+	
+	Qt::ItemFlags flags(const QModelIndex& index) const override
+	{
+		return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
+	}
+	
+	bool insertRows(int row, int count, const QModelIndex& parent) override
+	{
+		beginInsertRows(parent, row, row);
+		auto position = std::next(items.begin(), row);
+		items.insert(position, count, HistoryEntry{0.0, HashSet<Dataset*>()});
+		endInsertRows();
+		return true;
+	}
+	
+	bool removeRows(int row, int count, const QModelIndex& parent) override
+	{
+		if(row < 0 || items.size() <= (size_t)row)
+			return false;
+		beginRemoveRows(parent, row, row);
+		auto position = std::next(items.begin(), row);
+		items.erase(position, std::next(position, count));
+		endRemoveRows();
+		return true;
+	}
+	
+	HistoryEntry* appendRow()
+	{
+		int row = items.size();
+		
+		beginInsertRows(QModelIndex(), row, row);
+		items.push_back(HistoryEntry{0.0, HashSet<Dataset*>()});
+		endInsertRows();
+		return &items.back();
+	}
+	
+	HistoryEntry* get(const QModelIndex& index)
+	{
+		if(!index.isValid())
+			return nullptr;
+		if(index.model() != this)
+			return nullptr;
+		auto iter = std::next(items.begin(), index.row());
+		return &(*iter);
+	}
+	
+	
+	using Iterator = decltype(items)::iterator;
+	inline Iterator begin() { return items.begin(); }
+	inline Iterator end()   { return items.end();   }
+};
+
+
+struct TimeDatasetsModel : QAbstractListModel
+{
+	std::list<Dataset*>      items;
+	std::list<HistoryEntry>& times;
+	HistoryEntry*            selectedTime = nullptr;
+	
+	
+	explicit TimeDatasetsModel(std::list<Dataset*> items, std::list<HistoryEntry>& times, QObject* parent = nullptr) : QAbstractListModel(parent),
+		items(std::move(items)),
+		times(times)
+	{}
+	
+	void setSelectedTime(HistoryEntry* selectedTime)
+	{
+		if(this->selectedTime != selectedTime)
+		{
+			beginResetModel();
+			this->selectedTime = selectedTime;
+			endResetModel();
+		}
+	}
+	
+	HistoryEntry* getOwner(Dataset* dataset) const
+	{
+		for(HistoryEntry& entry : times)
+		{
+			if(entry.datasets.count(dataset) > 0)
+				return &entry;
+		}
+		return nullptr;
+	}
+	
+	int rowCount()                          const          { return items.size(); }
+	int rowCount(const QModelIndex& parent) const override { return rowCount();      }
+	
+	Qt::ItemFlags flags(const QModelIndex& index) const override
+	{
+//		return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
+		Qt::ItemFlags flags = Qt::ItemIsUserCheckable | Qt::ItemNeverHasChildren;
+		
+		// Do not enable item if no time is selected
+		if(!selectedTime)
+			return flags;
+		
+		// Do not enable item if it is owned by another time entry
+		Dataset*      dataset = *std::next(items.begin(), index.row());
+		HistoryEntry* owner   = getOwner(dataset);
+		if(owner && owner != selectedTime)
+			return flags;
+		
+		// Enable item if it does not have an owner or the owner is the currently selected time entry
+		return flags | Qt::ItemIsEnabled;
+	}
+	
+	QVariant data(const QModelIndex& index, int role) const override
+	{
+		if(role == Qt::ItemDataRole::DisplayRole)
+		{
+			Dataset* dataset = *std::next(items.begin(), index.row());
+			return QString::fromStdString(dataset->id);
+		}
+		
+		// This fragment decides whether an item shows a checkbox and, if it does, if it's checked or unchecked
+		// Items always show a checkbox
+		// - if item has an owner show checked
+		// - if item has no owner show uncheckd
+		// If the owner is different from the selected time entry the item will be disabled, but this is handled by the flags() funciton
+		if(role == Qt::ItemDataRole::CheckStateRole)
+		{
+//			if(!selectedTime)
+//				return Qt::CheckState::Unchecked;
+			
+			Dataset*      dataset = *std::next(items.begin(), index.row());
+			HistoryEntry* owner   = getOwner(dataset);
+			return owner ? Qt::CheckState::Checked : Qt::CheckState::Unchecked;
+		}
+		return QVariant();
+	}
+	
+	bool setData(const QModelIndex& index, const QVariant& value, int role) override
+	{
+		if(role != Qt::ItemDataRole::CheckStateRole)
+			return false;
+		
+		// We can't set ownership if we don't know the owner
+		if(!selectedTime)
+			return false;
+		
+		Dataset* dataset = *std::next(items.begin(), index.row());
+		bool isChecked = value.toBool(); 
+		if(isChecked)
+		{
+			assert(getOwner(dataset) == nullptr);
+			selectedTime->datasets.insert(dataset);
+		}
+		else
+		{
+			assert(getOwner(dataset) == selectedTime);
+			selectedTime->datasets.erase(dataset);
+		}
+		return true;
+	}
+	
+	void refresh()
+	{
+		beginResetModel();
+		endResetModel();
+	}
+};
+
+
+// TODO: Use a copy of configuration and set values on accept
+SimulationConfigDialog::SimulationConfigDialog(DatasetListModel* datasetsModel, SimulationConfig* configuration, QWidget* parent) : QDialog(parent),
+	configuration(configuration)
+{
+	assert(configuration);
+	
+	timesModel        = new TimesModel(configuration->load.history, this);
+	timeDatasetsModel = new TimeDatasetsModel(datasetsModel->items, timesModel->items, this);
+	
 	
 	QGridLayout* mainLayout = new QGridLayout(this);
 	int mainLayoutRow = 0;
@@ -59,15 +320,15 @@ SimulationConfigDialog::SimulationConfigDialog(QWidget* parent) : QDialog(parent
 		innerValueEdit->setValidator(new OptionalIntValidator(1, 0x7FFFFFFF, innerValueEdit));
 		layout->addWidget(innerValueEdit, 20);
 		
-		innerInputEdit = new QLineEdit(groupBox);
-		innerInputEdit->setPlaceholderText(tr("File"));
-		layout->addWidget(innerInputEdit, 80);
+		innerInputComboBox = new QComboBox(groupBox);
+		innerInputComboBox->setModel(new MeshInputProxyModel(datasetsModel, this));
+		layout->addWidget(innerInputComboBox, 80);
 		
 #if ENABLE_LINEEDIT_FILEDIALOG_ACTION
-		QAction* fileDialogAction = new QAction(innerInputEdit);
+		QAction* fileDialogAction = new QAction(innerInputComboBox);
 		fileDialogAction->setIcon(QIcon::fromTheme("document-open"));
 		QObject::connect(fileDialogAction, &QAction::triggered, this, &SimulationConfigDialog::onFileDialogActionTriggered);
-		innerInputEdit->addAction(fileDialogAction, QLineEdit::TrailingPosition);
+		innerInputComboBox->addAction(fileDialogAction, QLineEdit::TrailingPosition);
 #endif
 	}
 	mainLayoutRow += 1;
@@ -84,15 +345,16 @@ SimulationConfigDialog::SimulationConfigDialog(QWidget* parent) : QDialog(parent
 		outerValueEdit->setValidator(new OptionalIntValidator(1, 0x7FFFFFFF, outerValueEdit));
 		layout->addWidget(outerValueEdit, 20);
 		
-		outerInputEdit = new QLineEdit(this);
-		outerInputEdit->setPlaceholderText(tr("File"));
-		layout->addWidget(outerInputEdit, 80);
+		outerInputComboBox = new QComboBox(groupBox);
+		outerInputComboBox->addItem(QString(), QVariant::fromValue(nullptr));
+		outerInputComboBox->setModel(new MeshInputProxyModel(datasetsModel, this));
+		layout->addWidget(outerInputComboBox, 80);
 
 #if ENABLE_LINEEDIT_FILEDIALOG_ACTION
-		QAction* fileDialogAction = new QAction(outerInputEdit);
+		QAction* fileDialogAction = new QAction(outerInputComboBox);
 		fileDialogAction->setIcon(QIcon::fromTheme("document-open"));
 		QObject::connect(fileDialogAction, &QAction::triggered, this, &SimulationConfigDialog::onFileDialogActionTriggered);
-		outerInputEdit->addAction(fileDialogAction, QLineEdit::TrailingPosition);
+		outerInputComboBox->addAction(fileDialogAction, QLineEdit::TrailingPosition);
 #endif
 	}
 	mainLayoutRow += 1;
@@ -124,42 +386,61 @@ SimulationConfigDialog::SimulationConfigDialog(QWidget* parent) : QDialog(parent
 		groupBox->setFlat(true);
 		mainLayout->addWidget(groupBox, mainLayoutRow, 0, 1, 2);
 		
-		QHBoxLayout* historyBoxLayout = new QHBoxLayout(groupBox);
+		QVBoxLayout* historyBoxLayout = new QVBoxLayout(groupBox);
 		
+		// Add/remove buttons
 		{
-			QSortFilterProxyModel* sortedHistoryModel = new QSortFilterProxyModel(this);
-			sortedHistoryModel->setSourceModel(historyModel);
-			sortedHistoryModel->setDynamicSortFilter(true);
-			
-			historyTable = new QTableView(this);
-			historyTable->setModel(sortedHistoryModel);
-			historyTable->horizontalHeader()->setStretchLastSection(true);
-			historyTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
-			historyTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
-			historyTable->setSortingEnabled(true);
-			historyTable->sortByColumn(0, Qt::SortOrder::AscendingOrder);
-			QObject::connect(historyTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &SimulationConfigDialog::onSelectionChanged);
-			historyBoxLayout->addWidget(historyTable);
-		}
-		{
-			QVBoxLayout* buttonsLayout = new QVBoxLayout();
+			QHBoxLayout* buttonsLayout = new QHBoxLayout();
 			historyBoxLayout->addLayout(buttonsLayout);
 			
 			{
-				historyAddButton = new QToolButton(this);
-				historyAddButton->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
-				QObject::connect(historyAddButton, &QToolButton::clicked, this, &SimulationConfigDialog::onAddHistoryItemClicked);
-				buttonsLayout->addWidget(historyAddButton);
+				timesAddButton = new QToolButton(this);
+				timesAddButton->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+				QObject::connect(timesAddButton, &QToolButton::clicked, this, &SimulationConfigDialog::onAddHistoryItemClicked);
+				buttonsLayout->addWidget(timesAddButton);
 			}
 			{
-				historyRemoveButton = new QToolButton(this);
-				historyRemoveButton->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
-				historyRemoveButton->setEnabled(historyModel->rowCount() > 0);
-				QObject::connect(historyRemoveButton, &QToolButton::clicked, this, &SimulationConfigDialog::onRemoveHistoryItemClicked);
-				buttonsLayout->addWidget(historyRemoveButton);
+				timesRemoveButton = new QToolButton(this);
+				timesRemoveButton->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+				timesRemoveButton->setEnabled(timesModel->rowCount() > 0);
+				QObject::connect(timesRemoveButton, &QToolButton::clicked, this, &SimulationConfigDialog::onRemoveHistoryItemClicked);
+				buttonsLayout->addWidget(timesRemoveButton);
 				
 			}
 			buttonsLayout->addStretch(1);
+		}
+		
+		// Times and datasetsModel lists
+		{
+			QHBoxLayout* listsLayout = new QHBoxLayout();
+			historyBoxLayout->addLayout(listsLayout);
+			
+			
+			timesListView = new QListView(this);
+			timesListView->setModel(timesModel);
+			timesListView->setSelectionMode(QAbstractItemView::SingleSelection);
+			timesListView->installEventFilter(this);
+			QObject::connect(timesListView->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &SimulationConfigDialog::onTimeSelectionChanged);
+			listsLayout->addWidget(timesListView);
+			
+			datasetsListView = new QListView(this);
+			datasetsListView->setModel(timeDatasetsModel);
+			listsLayout->addWidget(datasetsListView);
+			
+			
+//			QSortFilterProxyModel* sortedHistoryModel = new QSortFilterProxyModel(this);
+//			sortedHistoryModel->setSourceModel(historyModel);
+//			sortedHistoryModel->setDynamicSortFilter(true);
+//			
+//			historyTable = new QTableView(this);
+//			historyTable->setModel(sortedHistoryModel);
+//			historyTable->horizontalHeader()->setStretchLastSection(true);
+//			historyTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
+//			historyTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
+//			historyTable->setSortingEnabled(true);
+//			historyTable->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+//			QObject::connect(historyTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &SimulationConfigDialog::onSelectionChanged);
+//			historyBoxLayout->addWidget(historyTable);
 		}
 	}
 	mainLayoutRow += 1;
@@ -167,124 +448,137 @@ SimulationConfigDialog::SimulationConfigDialog(QWidget* parent) : QDialog(parent
 		QDialogButtonBox* buttonBox = new QDialogButtonBox(Qt::Horizontal);
 		mainLayout->addWidget(buttonBox, mainLayoutRow, 0, 1, 2);
 		
-		QPushButton* okButton = buttonBox->addButton(QDialogButtonBox::StandardButton::Save);
-		QObject::connect(okButton, &QPushButton::clicked, this, &SimulationConfigDialog::onSaveClicked);
+		QPushButton* okButton = buttonBox->addButton(QDialogButtonBox::StandardButton::Ok);
+		QObject::connect(okButton, &QPushButton::clicked, this, &SimulationConfigDialog::onOkClicked);
 		
 		QPushButton* cancelButton = buttonBox->addButton(QDialogButtonBox::StandardButton::Cancel);
 		QObject::connect(cancelButton, &QPushButton::clicked, this, &SimulationConfigDialog::reject);
 	}
-}
-
-
-void SimulationConfigDialog::keyPressEvent(QKeyEvent* event)
-{
-	if(event->key() == Qt::Key_Delete)
+	
+	if(configuration->mesh.inner.value.has_value())
 	{
-		int itemIndex = historyTable->currentIndex().row();
-		if(itemIndex != -1)
-		{
-			event->accept();
-			GeoHistoryModel* model = static_cast<GeoHistoryModel*>(historyTable->model());
-			model->removeRow(itemIndex);
-		}
+		QString text = QString::number(configuration->mesh.inner.value.value());
+		innerValueEdit->setText(text);
 	}
-	event->ignore();
+	
+	if(configuration->mesh.inner.input)
+	{
+		QString text = QString::fromStdString(configuration->mesh.inner.input->id);
+		innerInputComboBox->setCurrentText(text);
+	}
+	
+	if(configuration->mesh.outer.value.has_value())
+	{
+		innerValueEdit->setText(QString::number(configuration->mesh.outer.value.value()));
+	}
+	
+	if(configuration->mesh.outer.input)
+	{
+		QString text = QString::fromStdString(configuration->mesh.outer.input->id);
+		outerInputComboBox->setCurrentText(text);
+	}
+	
+	
+	QModelIndex   selectedTimeIndex = timesListView->currentIndex();
+	HistoryEntry* selectedTime      = timesModel->get(selectedTimeIndex);
+	timeDatasetsModel->setSelectedTime(selectedTime);
 }
 
 
-#if ENABLE_LINEEDIT_FILEDIALOG_ACTION
-void SimulationConfigDialog::onMeshFileDialogActionTriggered()
+bool SimulationConfigDialog::eventFilter(QObject* object, QEvent* event)
 {
-	assert(dynamic_cast<QLineEdit*>(sender()->parent()) != nullptr);
+	if(object != timesListView)
+		return false;
+	if(event->type() != QEvent::KeyPress)
+		return false;
 	
-	QWidget*     target = static_cast<QWidget*>(sender()->parent());
-	QFileDialog* dialog = new QFileDialog(target);
-	QObject::connect(dialog, &QFileDialog::finished, this, &SimulationConfigDialog::onMeshFileDialogFinished);
-	dialog->show();
+	QKeyEvent* keyPressEvent = static_cast<QKeyEvent*>(event);
+	if(keyPressEvent->key() != Qt::Key_Delete)
+		return false;
+	onRemoveHistoryItemClicked();
+	return true;
 }
 
 
-void SimulationConfigDialog::onMeshFileDialogFinished(int resultCode)
+void SimulationConfigDialog::onTimeSelectionChanged(const QModelIndex& current, const QModelIndex& previous)
 {
-	sender()->deleteLater();
-	if(resultCode != QDialog::Accepted)
-		return;
+	timesRemoveButton->setEnabled(current.isValid());
 	
-	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
-	
-	assert(dialog->selectedFiles().size() == 1);
-	assert(dialog->selectedFiles().first().size() > 0);
-	QString path = dialog->selectedFiles().first();
-	
-	assert(dynamic_cast<QLineEdit*>(dialog->parent()) != nullptr);
-	QLineEdit* target = static_cast<QLineEdit*>(dialog->parent());
-	target->setText(path);
-}
-#endif
-
-
-SimulationConfig::Load::HistoryEntry* SimulationConfigDialog::selection() const
-{
-	SimulationConfig::Load::HistoryEntry* entry = nullptr;
-	QModelIndex selectionIndex = historyTable->currentIndex();
-	if(selectionIndex.isValid())
-		entry = historyModel->get(selectionIndex);
-	return entry;
-}
-
-
-void SimulationConfigDialog::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous)
-{
-	historyRemoveButton->setEnabled(current.isValid());
+	HistoryEntry* selectedTime = timesModel->get(current);
+	timeDatasetsModel->setSelectedTime(selectedTime);
 }
 
 
 void SimulationConfigDialog::onAddHistoryItemClicked()
 {
-	SimulationConfig::Load::HistoryEntry entry = {0.0, ""};
-	historyModel->appendItem(&entry);
+	timesModel->appendRow();
 }
 
 
 void SimulationConfigDialog::onRemoveHistoryItemClicked()
 {
-	int itemIndex = historyTable->currentIndex().row();
-	if(itemIndex != -1)
+	QModelIndex selectedTimeIndex = timesListView->currentIndex();
+	if(selectedTimeIndex.isValid())
 	{
-		GeoHistoryModel* model = static_cast<GeoHistoryModel*>(historyTable->model());
-		model->removeRow(itemIndex);
+		timesModel->removeRow(selectedTimeIndex.row());
+		timeDatasetsModel->refresh();
 	}
 }
 
 
-void SimulationConfigDialog::onSaveClicked()
+void SimulationConfigDialog::onOkClicked()
 {
-	QFileDialog* dialog = new QFileDialog(this);
-	dialog->setWindowTitle(tr("Save Simulation"));
-	dialog->setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
-	dialog->setAttribute(Qt::WA_DeleteOnClose);
-	QObject::connect(dialog, &QDialog::accepted, this, &SimulationConfigDialog::onSaveFileDialogAccepted);
-	dialog->open();
-}
-
-
-void SimulationConfigDialog::onSaveFileDialogAccepted()
-{
-	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
-	path = dialog->selectedFiles().first();
-	
+	configuration->mesh.inner.value.reset();
 	if(innerValueEdit->text().size() > 0)
-		configuration.mesh.inner.value = innerValueEdit->text().toInt();
-	if(innerInputEdit->text().size() > 0)
-		configuration.mesh.inner.input = innerInputEdit->text().toStdString();
+	{
+		bool ok;
+		int value = innerValueEdit->text().toInt(&ok);
+		if(ok)
+			configuration->mesh.inner.value = value;
+	}
+	
+	
+	configuration->mesh.inner.input = innerInputComboBox->currentData(Qt::UserRole).value<Dataset*>(); 
+	
+	
+	configuration->mesh.outer.value.reset();
 	if(outerValueEdit->text().size() > 0)
-		configuration.mesh.outer.value = outerValueEdit->text().toInt();
-	if(outerInputEdit->text().size() > 0)
-		configuration.mesh.outer.input = outerInputEdit->text().toStdString();
-	configuration.time.steps = stepsEdit->text().toInt();
-	configuration.load.scaling = scalingEdit->text().toFloat();
-	for(const GeoHistoryModel::HistoryEntry& item : historyModel->items)
-		configuration.load.history.push_back(item);
+	{
+		bool ok;
+		int value = outerValueEdit->text().toInt(&ok);
+		if(ok)
+			configuration->mesh.outer.value = value;
+	}
+	
+	
+	configuration->mesh.outer.input = outerInputComboBox->currentData(Qt::UserRole).value<Dataset*>();
+	
+	
+	configuration->time.steps = 1;
+	if(stepsEdit->text().size() > 0)
+	{
+		bool ok;
+		int value = stepsEdit->text().toInt(&ok);
+		if(ok)
+			configuration->time.steps = value; 
+	}
+	
+	
+	configuration->load.scaling = 1.0;
+	if(scalingEdit->text().size() > 0)
+	{
+		bool ok;
+		double value = stepsEdit->text().toDouble(&ok);
+		if(ok)
+			configuration->load.scaling = value;
+	}
+	
+	
+	configuration->load.history.clear();
+	for(HistoryEntry& entry : *timesModel)
+	{
+		configuration->load.history.push_back(entry);
+	}
 	
 	accept();
 }

@@ -30,7 +30,8 @@ struct Dataset
 	GeoValue                   maxValue;
 	
 	
-	explicit Dataset(DatasetID_t id);
+	explicit Dataset();
+//	explicit Dataset(DatasetID_t id);
 	Dataset(DatasetID_t id, bool hasDensity, bool isInteger);
 	
 	bool   geoValuesAreEqual(GeoValue a, GeoValue b);

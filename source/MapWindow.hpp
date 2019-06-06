@@ -25,13 +25,13 @@ class DatasetListWidget;
 class DatasetControlWidget;
 class MapView;
 
-class DatasetListModel;
+struct SimulationConfig;
+struct DatasetListModel;
 
 
 class MapWindow : public QMainWindow
 {
 	Q_OBJECT
-	
 public:
 	enum MapTool
 	{
@@ -49,7 +49,6 @@ public:
 	};
 	
 	
-protected:
 	// Pointer to data source
 	DatasetListModel* datasets = nullptr;
 	
@@ -91,33 +90,41 @@ protected:
 	void onActionOpenFile();
 	void onOpenFileDialogAccepted();
 	
+	void onActionOpenProject();
+	void onOpenProjectDialogAccepted();
+	
 	void onActionSaveFile();
 	void onActionSaveAs();
 	void onActionSaveAll();
-	void saveFileBegin(Dataset* dataset, const std::string& path);
+	void saveFileBegin(Dataset* dataset, const QString& path);
 	void onSaveFileDialogAccepted();
-	void saveFileEnd(Dataset* dataset, const std::string& path);
+	void saveFileEnd(Dataset* dataset, const QString& path);
+	
+	void onActionSaveProject();
+	void onActionSaveProjectAs();
+	void saveProjectBegin(const QString& path);
+	void onSaveProjectDialogAccepted();
+	void saveProjectEnd(const QString& path);
 	
 	void onActionConfigureSimulation();
-	void onSimulationConfigDialogAccepted();
 	
 	void onActionZoomOut();
 	void onActionZoomIn();
 	
-	void onGridToolTriggered();
 	void onMarkToolTriggered();
 	void onUnmarkToolTriggered();
+	void onGridToolTriggered();
 	
 	void onDatasetListItemCreated(Dataset* dataset);
-	void onDatasetListItemSelected(Dataset* dataset);
+	void onDatasetListItemSelected(Dataset* current, Dataset* previous);
 	void onDatasetListItemDeleted(Dataset* dataset);
 	
-	void onDatasetResolutionChanged(Dataset* dataset, int value);
-	void onDatasetResolutionDecreased(Dataset* dataset, int oldResolution);
-	void onDatasetResolutionIncreased(Dataset* dataset, int oldResolution);
-	void onDatasetDefaultChanged(Dataset* dataset, GeoValue newDefaultValue);
-	void onDatasetDensityChanged(Dataset* dataset, double value);
-	void onDatasetValueRangeChanged(Dataset* dataset, GeoValue minValue, GeoValue maxValue);
+	void onDatasetResolutionChanged(Dataset* dataset, int oldResolution);
+	void onDatasetResolutionDecreased(int newResolution, int oldResolution);
+	void onDatasetResolutionIncreased(int newResolution, int oldResolution);
+	void onDatasetDefaultChanged(Dataset* dataset, GeoValue oldDefaultValue);
+	void onDatasetDensityChanged(Dataset* dataset, double oldValue);
+	void onDatasetValueRangeChanged(Dataset* dataset, GeoValue oldMinValue, GeoValue oldMaxValue);
 	
 	void onGeoValueEditFinished();
 	
@@ -127,9 +134,12 @@ protected:
 	
 	void writeHighlightedGeoValuesIntoLineEdit();
 	
-	Dataset* deserializeDataset(const std::string& path);
-	Dataset* deserializeDataset(const std::string& path, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName);
-	bool     serializeDataset(const std::string& path, Dataset* dataset);
+	bool deserializeSimulationConfig(const QString& path, SimulationConfig* config, const std::list<Dataset*>& datasets);
+	bool serializeSimulationConfig(const QString& path, SimulationConfig* config);
+	
+	bool deserializeDataset(const QString& path, Dataset* dataset);
+	bool deserializeDataset(const QString& path, Dataset* dataset, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName);
+	bool serializeDataset(const QString& path, Dataset* dataset);
 };
 
 

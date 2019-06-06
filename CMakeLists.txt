@@ -38,10 +38,9 @@ set(SOURCE_FILES
     source/Containers.hpp
     source/GeoValue.hpp
     source/Dataset.cpp source/Dataset.hpp
-    source/SimulationConfig.hpp
+    source/SimulationConfig.hpp source/SimulationConfig.cpp
     source/MapUtils.hpp
     source/models/DatasetListModel.cpp source/models/DatasetListModel.hpp
-    source/models/GeoHistoryModel.cpp source/models/GeoHistoryModel.hpp
     source/MapWindow.cpp source/MapWindow.hpp
     source/MapView.cpp source/MapView.hpp
     source/GeoValueValidator.cpp source/GeoValueValidator.hpp

@@ -8,13 +8,11 @@
 struct Dataset;
 
 
-class DatasetListModel : public QAbstractListModel
+struct DatasetListModel : public QAbstractListModel
 {
-protected:
-	std::vector<Dataset*> items;
+	std::list<Dataset*> items;
 	
 	
-public:
 	explicit DatasetListModel(QObject* parent = nullptr);
 	~DatasetListModel() override;
 	
@@ -27,14 +25,16 @@ public:
 	bool          insertRows(int row, int count, const QModelIndex& parent) override;
 	bool          removeRows(int row, int count, const QModelIndex& parent) override;
 	
+	void        reset(std::list<Dataset*>&& newItems);
+	Dataset*    get(int row);
 	Dataset*    get(const QModelIndex& modelIndex);
 	QModelIndex findIndex(Dataset* dataset);
 	bool        appendItem(Dataset* dataset);
 	bool        removeItem(Dataset* dataset);
 	
 	using Iterator = decltype(items)::iterator;
-	Iterator begin();
-	Iterator end();
+	inline Iterator begin() { return items.begin(); }
+	inline Iterator end()   { return items.end();   }
 };
 
 #endif //GIAGUI_DATASETLISTMODEL_HPP

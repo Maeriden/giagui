@@ -19,16 +19,22 @@
 #include "GeoValueValidator.hpp"
 #include "DatasetListWidget.hpp"
 #include "DatasetControlWidget.hpp"
-#include "source/dialogs/SimulationConfigDialog.hpp"
 #include "models/DatasetListModel.hpp"
+#include "dialogs/SimulationConfigDialog.hpp"
 #include "dialogs/DatasetCreateDialog.hpp"
+
+
+static SimulationConfig globalSimulationConfig;
+
+
 
 
 MapWindow::MapWindow(QWidget* parent) : QMainWindow(parent)
 {
 	datasets = new DatasetListModel(this);
-#if 0
-	datasets->appendItem(new Dataset("prova", true, false));
+#if 1
+	datasets->appendItem(new Dataset("prova1", true, false));
+	datasets->appendItem(new Dataset("prova2", true, false));
 #endif
 	resize(1000, 750);
 	
@@ -104,28 +110,49 @@ void MapWindow::addActionsToMenuBar(QMenuBar* menuBar)
 {
 	QMenu* menuFile = new QMenu(tr("File"), this);
 	{
+//		QAction* action = new QAction(this);
+//		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-open")));
+//		action->setText(tr("Open..."));
+//		action->setShortcuts(QKeySequence::StandardKey::Open);
+//		action->setStatusTip(tr("Open file"));
+//		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionOpenFile);
+//		menuFile->addAction(action);
+//	} {
+//		QAction* action = new QAction(this);
+//		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save")));
+//		action->setText(tr("Save"));
+//		action->setShortcuts(QKeySequence::StandardKey::Save);
+//		action->setStatusTip(tr("Save file"));
+//		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveFile);
+//		menuFile->addAction(action);
+//	} {
+//		QAction* action = new QAction(this);
+//		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save-as")));
+//		action->setText(tr("Save As..."));
+//		action->setShortcuts(QKeySequence::StandardKey::SaveAs);
+//		action->setStatusTip(tr("Save file as"));
+//		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveAs);
+//		menuFile->addAction(action);
+	} {
 		QAction* action = new QAction(this);
 		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-open")));
-		action->setText(tr("Open..."));
+		action->setText(tr("Open Project..."));
 		action->setShortcuts(QKeySequence::StandardKey::Open);
-		action->setStatusTip(tr("Open file"));
-		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionOpenFile);
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionOpenProject);
 		menuFile->addAction(action);
 	} {
 		QAction* action = new QAction(this);
 		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save")));
-		action->setText(tr("Save"));
+		action->setText(tr("Save Project"));
 		action->setShortcuts(QKeySequence::StandardKey::Save);
-		action->setStatusTip(tr("Save file"));
-		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveFile);
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveProject);
 		menuFile->addAction(action);
 	} {
 		QAction* action = new QAction(this);
 		action->setIcon(QIcon::fromTheme(QString::fromUtf8("document-save-as")));
-		action->setText(tr("Save As..."));
+		action->setText(tr("Save Project As..."));
 		action->setShortcuts(QKeySequence::StandardKey::SaveAs);
-		action->setStatusTip(tr("Save file as"));
-		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveAs);
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveProjectAs);
 		menuFile->addAction(action);
 	}
 	menuFile->addSeparator();
@@ -190,6 +217,7 @@ void MapWindow::addActionsToToolBar(QToolBar* toolBar)
 		actionMark->setCheckable(true);
 		QObject::connect(actionMark, &QAction::triggered, this, &MapWindow::onMarkToolTriggered);
 		
+#if ENABLE_CELL_SELECTION_TOOLS
 		QAction* actionUnmark = new QAction();
 		actionUnmark->setIcon(QIcon(QString::fromUtf8(":/images/icon-cell-unmark.svg")));
 		actionUnmark->setText(tr("Unmark"));
@@ -197,6 +225,7 @@ void MapWindow::addActionsToToolBar(QToolBar* toolBar)
 		actionUnmark->setStatusTip(tr("Click on the map to unmark cells for editing"));
 		actionUnmark->setCheckable(true);
 		QObject::connect(actionUnmark, &QAction::triggered, this, &MapWindow::onUnmarkToolTriggered);
+#endif
 		
 		QAction* actionGrid = new QAction();
 		actionGrid->setIcon(QIcon(QString::fromUtf8(":/images/icon-grid.svg")));
@@ -275,15 +304,15 @@ void MapWindow::keyPressEvent(QKeyEvent* event)
 
 void MapWindow::closeEvent(QCloseEvent* event)
 {
-	bool confirmed = true;
-	for(auto& [dataset, saveState] : datasetSaveStates)
-	{
-		if(saveState.modified)
-		{
-			confirmed = false;
-			break;
-		}
-	}
+	bool confirmed = !isWindowModified();
+//	for(auto& [dataset, saveState] : datasetSaveStates)
+//	{
+//		if(saveState.modified)
+//		{
+//			confirmed = false;
+//			break;
+//		}
+//	}
 	
 	if(!confirmed)
 	{
@@ -319,30 +348,144 @@ void MapWindow::onOpenFileDialogAccepted()
 {
 	QFileDialog* fileDialog = static_cast<QFileDialog*>(sender());
 	
-	for(const QString& qPath : fileDialog->selectedFiles())
+	try
 	{
-		assert(!qPath.isEmpty());
-		const std::string& path = qPath.toStdString();
-		
-		Dataset* dataset = deserializeDataset(path);
-		if(dataset)
+		for(const QString& path : fileDialog->selectedFiles())
 		{
-			if(datasets->appendItem(dataset))
+			assert(path.size() > 0);
+			
+			Dataset* dataset = new Dataset();
+			bool success = deserializeDataset(path, dataset);
+			if(success)
 			{
-				datasetSaveStates[dataset].path = path;
-				datasetSaveStates[dataset].modified = false;
+				if(datasets->appendItem(dataset))
+				{
+					datasetSaveStates[dataset].path     = path.toStdString();
+					datasetSaveStates[dataset].modified = false;
+				}
+				else
+				{
+					QString datasetName = QString::fromStdString(dataset->id);
+					
+					QMessageBox* dialog = new QMessageBox(this);
+					dialog->setWindowTitle(tr("Error"));
+					dialog->setText(tr("Error while adding %1 to the datasets list").arg(datasetName));
+					dialog->setAttribute(Qt::WA_DeleteOnClose);
+					dialog->open();
+					
+					delete dataset;
+				}
 			}
 			else
 			{
-				QMessageBox* dialog = new QMessageBox(this);
-				dialog->setWindowTitle(tr("Error"));
-				dialog->setText(tr("Error while adding %1 to the datasets list").arg(QString::fromStdString(dataset->id)));
-				dialog->setAttribute(Qt::WA_DeleteOnClose, true);
-				dialog->open();
-				
-				delete dataset;
+				// TODO: Error dialog?
 			}
 		}
+	}
+	catch(std::bad_alloc& ex)
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(__FILE__ ":" STR(__LINE__) " Memory allocation error");
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	}
+}
+
+
+void MapWindow::onActionOpenProject()
+{
+	// TODO: Show unsaved changes dialog
+	
+	QFileDialog* dialog = new QFileDialog(this);
+	dialog->setWindowTitle(tr("Open Project"));
+	dialog->setAcceptMode(QFileDialog::AcceptOpen);
+	dialog->setFileMode(QFileDialog::FileMode::Directory);
+	dialog->setOption(QFileDialog::Option::ShowDirsOnly, true);
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onOpenProjectDialogAccepted);
+	dialog->open();
+}
+
+
+void MapWindow::onOpenProjectDialogAccepted()
+{
+	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
+	assert(dialog->selectedFiles().size() == 1);
+	assert(dialog->selectedFiles().first().size() > 0);
+	QString directoryPath = dialog->selectedFiles().first();
+	
+	
+	QDir    directory = QDir(directoryPath);
+	QString filePath;
+	bool    success = true;
+	
+	
+	std::list<Dataset*> datasetList;
+	try
+	{
+		for(QFileInfo& fileInfo : directory.entryInfoList(QDir::Filter::Files, QDir::SortFlag::NoSort))
+		{
+			if(fileInfo.suffix() != "h3")
+				continue;
+			
+			filePath = fileInfo.filePath();
+			Dataset* dataset = new Dataset();
+			success = deserializeDataset(filePath, dataset);
+			if(success)
+				datasetList.push_back(dataset);
+			else
+				break;
+		}
+	}
+	catch(std::bad_alloc& ex)
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(__FILE__ ":" STR(__LINE__) " Memory allocation error");
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	}
+	
+	
+	SimulationConfig config;
+	try
+	{
+		if(success)
+		{
+			filePath = directory.filePath("_project.toml");
+			success  = deserializeSimulationConfig(filePath, &config, datasetList);
+		}
+	}
+	catch(std::bad_alloc& ex)
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(__FILE__ ":" STR(__LINE__) " Memory allocation error");
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	}
+	
+	
+	if(success)
+	{
+		globalSimulationConfig = std::move(config);
+		datasets->reset(std::move(datasetList));
+		
+		setWindowFilePath(directoryPath);
+		setWindowModified(false);
+	}
+	else
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Error while saving %1").arg(filePath));
+		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+		
+		for(Dataset* dataset : datasetList)
+			delete dataset;
 	}
 }
 
@@ -352,9 +495,9 @@ void MapWindow::onActionSaveFile()
 	Dataset* dataset = datasetListWidget->selection();
 	if(!dataset)
 		return;
-	
 	DatasetSaveState& saveState = datasetSaveStates[dataset];
-	saveFileBegin(dataset, saveState.path);
+	QString           path = QString::fromStdString(saveState.path);
+	saveFileBegin(dataset, path);
 }
 
 
@@ -363,7 +506,6 @@ void MapWindow::onActionSaveAs()
 	Dataset* dataset = datasetListWidget->selection();
 	if(!dataset)
 		return;
-	
 	saveFileBegin(dataset, "");
 }
 
@@ -373,23 +515,26 @@ void MapWindow::onActionSaveAll()
 	for(Dataset* dataset : *datasets)
 	{
 		DatasetSaveState& saveState = datasetSaveStates[dataset];
-		saveFileBegin(dataset, saveState.path);
+		QString           path = QString::fromStdString(saveState.path);
+		saveFileBegin(dataset, path);
 	}
 }
 
 
-void MapWindow::saveFileBegin(Dataset* dataset, const std::string& path)
+void MapWindow::saveFileBegin(Dataset* dataset, const QString& path)
 {
 	assert(dataset);
-	if(path.empty())
+	if(path.isEmpty())
 	{
+		QString filename = QString::fromStdString(dataset->id) + ".h3";
+		
 		QFileDialog* dialog = new QFileDialog(this);
 		dialog->setWindowTitle(tr("Save File"));
 		dialog->setNameFilter(tr("TOML+H3 (*.h3);;All Files (*)"));
 		dialog->setAcceptMode(QFileDialog::AcceptSave);
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->setProperty("dataset", QVariant::fromValue(dataset));
-		dialog->selectFile(QString::fromStdString(dataset->id) + ".h3");
+		dialog->selectFile(filename);
 		dialog->setDefaultSuffix("h3");
 		QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onSaveFileDialogAccepted);
 		dialog->open();
@@ -411,91 +556,117 @@ void MapWindow::onSaveFileDialogAccepted()
 	Dataset* dataset = dialog->property("dataset").value<Dataset*>();
 	assert(dataset);
 	
-	saveFileEnd(dataset, path.toStdString());
+	saveFileEnd(dataset, path);
 }
 
 
-void MapWindow::saveFileEnd(Dataset* dataset, const std::string& path)
+void MapWindow::saveFileEnd(Dataset* dataset, const QString& path)
 {
 	bool success = serializeDataset(path, dataset);
 	if(success)
 	{
 		DatasetSaveState& saveState = datasetSaveStates[dataset];
-		saveState.path     = path;
+		saveState.path     = path.toStdString();
 		saveState.modified = false;
+	}
+}
+
+
+void MapWindow::onActionSaveProject()
+{
+	QString path = windowFilePath();
+	saveProjectBegin(path);
+}
+
+
+void MapWindow::onActionSaveProjectAs()
+{
+	QString path = "";
+	saveProjectBegin(path);
+}
+
+
+void MapWindow::saveProjectBegin(const QString& directoryPath)
+{
+	if(directoryPath.isEmpty())
+	{
+		QFileDialog* dialog = new QFileDialog(this);
+		dialog->setWindowTitle(tr("Save Project"));
+		dialog->setAcceptMode(QFileDialog::AcceptSave);
+		dialog->setFileMode(QFileDialog::FileMode::Directory);
+		dialog->setOption(QFileDialog::Option::ShowDirsOnly, true);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onSaveProjectDialogAccepted);
+		dialog->open();
+	}
+	else
+	{
+		saveProjectEnd(directoryPath);
+	}
+}
+
+
+void MapWindow::onSaveProjectDialogAccepted()
+{
+	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
+	assert(dialog->selectedFiles().size() == 1);
+	assert(dialog->selectedFiles().first().size() > 0);
+	QString directoryPath = dialog->selectedFiles().first();
+	
+	saveProjectEnd(directoryPath);
+}
+
+
+void MapWindow::saveProjectEnd(const QString& directoryPath)
+{
+	assert(directoryPath.size() > 0);
+	
+	QDir    directory = QDir(directoryPath);
+	QString filePath;
+	bool    success = true;
+	
+	for(Dataset* dataset : *datasets)
+	{
+		QString filename = QString::fromStdString(dataset->id) + ".h3";
+		filePath = directory.filePath(filename);
+		success = serializeDataset(filePath, dataset);
+		if(!success)
+			break;
 		
-		if(dataset == datasetListWidget->selection())
-		{
-			setWindowFilePath(QString::fromStdString(saveState.path));
-			setWindowModified(saveState.modified);
-		}
+		datasetSaveStates[dataset].path     = filePath.toStdString();
+		datasetSaveStates[dataset].modified = false;
+	}
+	
+	if(success)
+	{
+		SimulationConfig* config = &globalSimulationConfig;
+		filePath = directory.filePath("_project.toml");
+		success = serializeSimulationConfig(filePath, config);
+	}
+	
+	if(success)
+	{
+		setWindowFilePath(directoryPath);
+		setWindowModified(false);
+	}
+	else
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Error while saving %1").arg(filePath));
+		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
 	}
 }
 
 
 void MapWindow::onActionConfigureSimulation()
 {
-	SimulationConfigDialog* simulationWindow = new SimulationConfigDialog(this);
+	SimulationConfig* config = &globalSimulationConfig;
+	SimulationConfigDialog* simulationWindow = new SimulationConfigDialog(datasets, config, this);
 	simulationWindow->setAttribute(Qt::WA_DeleteOnClose);
-	QObject::connect(simulationWindow, &SimulationConfigDialog::accepted, this, &MapWindow::onSimulationConfigDialogAccepted);
 	simulationWindow->open();
-}
-
-
-void MapWindow::onSimulationConfigDialogAccepted()
-{
-	struct {
-		bool operator()(const SimulationConfig::Load::HistoryEntry& a, const SimulationConfig::Load::HistoryEntry& b) {
-			return a.time > b.time;
-		}
-	} descendingOrder;
-	
-	SimulationConfigDialog* simulationConfigDialog = static_cast<SimulationConfigDialog*>(sender());
-	SimulationConfig&       config                 = simulationConfigDialog->configuration;
-	
-	std::sort(config.load.history.begin(), config.load.history.end(), descendingOrder);
-	
-	std::ofstream stream(simulationConfigDialog->path.toStdString());
-	if(!stream.is_open())
-	{
-		QMessageBox* messageBox = new QMessageBox(this);
-		messageBox->setWindowTitle(tr("I/O error"));
-		messageBox->setText(tr("Could not open %1 for writing").arg(simulationConfigDialog->path));
-		messageBox->setStandardButtons(QMessageBox::StandardButton::Ok);
-		QObject::connect(messageBox, &QMessageBox::finished, messageBox, &QMessageBox::deleteLater);
-		messageBox->open();
-		return;
-	}
-	
-	stream << "[mesh.inner]" << std::endl;
-	if(config.mesh.inner.value.has_value())
-		stream << "value = "  << config.mesh.inner.value.value()        << std::endl;
-	if(config.mesh.inner.input.has_value())
-		stream << "input = '" << config.mesh.inner.input.value() << "'" << std::endl;
-	stream << std::endl;
-	
-	stream << "[mesh.outer]" << std::endl;
-	if(config.mesh.outer.value.has_value())
-		stream << "value = "  << config.mesh.outer.value.value()        << std::endl;
-	if(config.mesh.outer.input.has_value())
-		stream << "input = '" << config.mesh.outer.input.value() << "'" << std::endl;
-	stream << std::endl;
-	
-	stream << "[time]"                        << std::endl;
-	stream << "steps = " << config.time.steps << std::endl;
-	stream << std::endl;
-	
-	stream << "[load]"                          << std::endl;
-	stream << "steps = " << config.load.scaling << std::endl;
-	stream << std::endl;
-	
-	for(const SimulationConfig::Load::HistoryEntry& entry : config.load.history)
-	{
-		stream << "[[load.history]]"                <<        std::endl;
-		stream << "time = "      << -entry.time     <<        std::endl;
-		stream << "filename = '" <<  entry.filename << "'" << std::endl;
-		stream << std::endl;
-	}
 }
 
 
@@ -513,13 +684,6 @@ void MapWindow::onActionZoomIn()
 }
 
 
-void MapWindow::onGridToolTriggered()
-{
-	mapTool = MapTool::Grid;
-	mapView->setInteractionMode(MapView::InteractionMode::Grid);
-}
-
-
 void MapWindow::onMarkToolTriggered()
 {
 	mapTool = MapTool::Mark;
@@ -534,6 +698,13 @@ void MapWindow::onUnmarkToolTriggered()
 }
 
 
+void MapWindow::onGridToolTriggered()
+{
+	mapTool = MapTool::Grid;
+	mapView->setInteractionMode(MapView::InteractionMode::Grid);
+}
+
+
 void MapWindow::onDatasetListItemCreated(Dataset* dataset)
 {
 	assert(dataset);
@@ -541,20 +712,18 @@ void MapWindow::onDatasetListItemCreated(Dataset* dataset)
 }
 
 
-void MapWindow::onDatasetListItemSelected(Dataset* dataset)
+void MapWindow::onDatasetListItemSelected(Dataset* currentDataset, Dataset* previousDataset)
 {
-	if(dataset)
+	
+	if(currentDataset)
 	{
+		highlightedIndices.clear();
+		gridIndices.clear();
 		
-		
-		geoValueEditLine->setPlaceholderText(QString::fromStdString(dataset->measureUnit));
+		geoValueEditLine->setPlaceholderText(QString::fromStdString(currentDataset->measureUnit));
 		writeHighlightedGeoValuesIntoLineEdit();
 		if(QApplication::focusWidget() == geoValueEditLine)
 			geoValueEditLine->selectAll();
-		
-		DatasetSaveState& saveState = datasetSaveStates[dataset];
-		setWindowFilePath(QString::fromStdString(saveState.path));
-		setWindowModified(saveState.modified);
 	}
 	else
 	{
@@ -566,60 +735,58 @@ void MapWindow::onDatasetListItemSelected(Dataset* dataset)
 		geoValueEditLine->setPlaceholderText("");
 		geoValueEditLine->setEnabled(false);
 		geoValueEditLine->blockSignals(false);
-		
-		setWindowFilePath("");
-		setWindowModified(false);
 	}
 	
-	// NOTE: Setting data source triggers a resolution changed signal that will recompute highlighted cells 
-	datasetControlWidget->setDataSource(dataset);
-	mapView->setDataSource(dataset);
+	datasetControlWidget->setDataSource(currentDataset);
+	mapView->setDataSource(currentDataset);
 }
 
 
 void MapWindow::onDatasetListItemDeleted(Dataset* dataset)
 {
 	datasetSaveStates.erase(dataset);
+	
+	for(SimulationConfig::Load::HistoryEntry& entry : globalSimulationConfig.load.history)
+		if(entry.datasets.count(dataset) > 0)
+			entry.datasets.erase(dataset);
 }
 
 
-void MapWindow::onDatasetResolutionChanged(Dataset* dataset, int newResolution)
+void MapWindow::onDatasetResolutionChanged(Dataset* dataset, int oldResolution)
 {
-	assert(IS_VALID_RESOLUTION(newResolution));
-	assert(dataset->resolution != newResolution);
+	assert(IS_VALID_RESOLUTION(dataset->resolution));
 	
 	// TODO: Profile this to see if it's worth doing the operation in another thread
 	try
 	{
-		int oldResolution = dataset->resolution;
-		if(newResolution < oldResolution)
+		if(dataset->resolution < oldResolution)
 		{
 			// NOTE: We keep this line for future reference just in case Qt feels like being a dick
 //			QApplication::postEvent(this->resolutionSpinbox, new QMouseEvent(QEvent::MouseButtonRelease, QPoint( 0, 0 ), Qt::LeftButton, Qt::NoButton, Qt::NoModifier) );
-			dataset->decreaseResolution(newResolution);
-			onDatasetResolutionDecreased(dataset, oldResolution);
+			onDatasetResolutionDecreased(dataset->resolution, oldResolution);
 		}
 		else
 		{
-			dataset->increaseResolution(newResolution);
-			onDatasetResolutionIncreased(dataset, oldResolution);
+			onDatasetResolutionIncreased(dataset->resolution, oldResolution);
 		}
+		
+		mapView->requestRepaint();
+		setWindowModified(true);
 	}
 	catch(std::bad_alloc& ex)
 	{
 		QMessageBox::critical(this, tr("Memory allocation error"), tr("Not enough memory to store new values"));
+		// TODO: Let application crash? Data consistency is not enforced anyway
 	}
-	
-	mapView->requestRepaint();
 }
 
 
-void MapWindow::onDatasetResolutionDecreased(Dataset* dataset, int oldResolution)
+void MapWindow::onDatasetResolutionDecreased(int newResolution, int oldResolution)
 {
 	HashSet<H3Index> hlIndices;
 	for(H3Index childIndex : highlightedIndices)
 	{
-		H3Index parentIndex = h3ToParent(childIndex, dataset->resolution);
+		H3Index parentIndex = h3ToParent(childIndex, newResolution);
 		assert(parentIndex != H3_INVALID_INDEX);
 		hlIndices.insert(parentIndex);
 	}
@@ -629,7 +796,7 @@ void MapWindow::onDatasetResolutionDecreased(Dataset* dataset, int oldResolution
 	HashSet<H3Index> gIndices;
 	for(H3Index childIndex : gridIndices)
 	{
-		H3Index parentIndex = h3ToParent(childIndex, dataset->resolution);
+		H3Index parentIndex = h3ToParent(childIndex, newResolution);
 		assert(parentIndex != H3_INVALID_INDEX);
 		gIndices.insert(parentIndex);
 	}
@@ -637,15 +804,15 @@ void MapWindow::onDatasetResolutionDecreased(Dataset* dataset, int oldResolution
 }
 
 
-void MapWindow::onDatasetResolutionIncreased(Dataset* dataset, int oldResolution)
+void MapWindow::onDatasetResolutionIncreased(int newResolution, int oldResolution)
 {
-	uint64_t childrenBufferLength = h3MaxChildrenCount(oldResolution, dataset->resolution);
+	uint64_t childrenBufferLength = h3MaxChildrenCount(oldResolution, newResolution);
 	H3Index* childrenBuffer       = new H3Index[childrenBufferLength];
 	
 	HashSet<H3Index> newHighlightIndices;
 	for(H3Index parentIndex : highlightedIndices)
 	{
-		h3ToChildren(parentIndex, dataset->resolution, childrenBuffer);
+		h3ToChildren(parentIndex, newResolution, childrenBuffer);
 		newHighlightIndices.insert(childrenBuffer, childrenBuffer + childrenBufferLength);
 	}
 	newHighlightIndices.erase(H3_INVALID_INDEX);
@@ -655,7 +822,7 @@ void MapWindow::onDatasetResolutionIncreased(Dataset* dataset, int oldResolution
 	HashSet<H3Index> newGridIndices;
 	for(H3Index parentIndex : gridIndices)
 	{
-		h3ToChildren(parentIndex, dataset->resolution, childrenBuffer);
+		h3ToChildren(parentIndex, newResolution, childrenBuffer);
 		newGridIndices.insert(childrenBuffer, childrenBuffer + childrenBufferLength);
 	}
 	newGridIndices.erase(H3_INVALID_INDEX);
@@ -665,32 +832,22 @@ void MapWindow::onDatasetResolutionIncreased(Dataset* dataset, int oldResolution
 }
 
 
-void MapWindow::onDatasetDefaultChanged(Dataset* dataset, GeoValue newDefaultValue)
+void MapWindow::onDatasetDefaultChanged(Dataset* dataset, GeoValue oldDefaultValue)
 {
-	assert(datasets);
-	
-	dataset->defaultValue = newDefaultValue;
+	setWindowModified(true);
 }
 
 
-void MapWindow::onDatasetDensityChanged(Dataset* dataset, double value)
+void MapWindow::onDatasetDensityChanged(Dataset* dataset, double oldValue)
 {
-	assert(datasets);
-	
-	assert(dataset->hasDensity());
-	assert(dataset->density != value);
-	dataset->density = value;
+	setWindowModified(true);
 }
 
 
-void MapWindow::onDatasetValueRangeChanged(Dataset* dataset, GeoValue minValue, GeoValue maxValue)
+void MapWindow::onDatasetValueRangeChanged(Dataset* dataset, GeoValue oldMinValue, GeoValue oldMaxValue)
 {
-	assert(datasets);
-	
-	dataset->minValue = minValue;
-	dataset->maxValue = maxValue;
 	mapView->redrawValuesRange();
-	mapView->requestRepaint(); // update colors
+	setWindowModified(true);
 }
 
 
@@ -734,10 +891,11 @@ void MapWindow::onGeoValueEditFinished()
 	
 	if(affectedCellsCount > 0)
 	{
-		DatasetSaveState& saveState = datasetSaveStates[dataset];
-		saveState.modified = true;
+//		DatasetSaveState& saveState = datasetSaveStates[dataset];
+//		saveState.modified = true;
+//		setWindowModified(saveState.modified);
 		
-		setWindowModified(saveState.modified);
+		setWindowModified(true);
 		mapView->requestRepaint();
 	}
 }
@@ -839,11 +997,33 @@ void MapWindow::onMapViewCellSelected(H3Index index)
 	assert(datasets);
 	assert(index != H3_INVALID_INDEX);
 	
+	Dataset* dataset = datasetListWidget->selection();
+	if(!dataset)
+		return;
+	
+#if ENABLE_CELL_SELECTION_TOOLS
 	if(mapTool == MapTool::Mark)
 		highlightedIndices.insert(index);
 	else if(mapTool == MapTool::Unmark)
 		highlightedIndices.erase(index);
-		
+	
+#else
+	Qt::KeyboardModifiers ctrl = QApplication::keyboardModifiers() & Qt::ControlModifier;
+	if(ctrl)
+	{
+		if(highlightedIndices.count(index) == 0)
+			highlightedIndices.insert(index);
+		else
+			highlightedIndices.erase(index);
+	}
+	else
+	{
+		highlightedIndices.clear();
+		highlightedIndices.insert(index);
+	}
+	
+#endif
+	
 	writeHighlightedGeoValuesIntoLineEdit();
 	if(QApplication::focusWidget() == geoValueEditLine)
 		geoValueEditLine->selectAll();
@@ -894,18 +1074,18 @@ void MapWindow::onMapViewAreaSelected(QRectF area)
 }
 
 
-Dataset* MapWindow::deserializeDataset(const std::string& path)
+bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfig* config, const std::list<Dataset*>& datasets)
 {
-	std::ifstream stream(path);
+	std::ifstream stream(path.toStdString());
 	if(!stream.is_open())
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Cannot open %1 for reading").arg(QString::fromStdString(path)));
+		dialog->setText(tr("Cannot open %1 for reading").arg(path));
 		dialog->setInformativeText(tr("Operation aborted"));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
-		return nullptr;
+		return false;
 	}
 	
 	
@@ -922,11 +1102,176 @@ Dataset* MapWindow::deserializeDataset(const std::string& path)
 		
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Error while parsing '%1'").arg(QString::fromStdString(path)));
+		dialog->setText(tr("Error while parsing '%1'").arg(path));
 		dialog->setInformativeText(tr("Operation aborted"));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
-		return nullptr;
+		return false;
+	}
+	
+	
+	struct MatchByName {
+		const std::string& needle;
+		explicit MatchByName(const std::string& needle) : needle(needle) {}
+		bool operator()(const Dataset* x) { return needle == x->id; }
+	};
+	
+	
+	if(root->contains_qualified("mesh.inner.value"))
+	{
+		config->mesh.inner.value = *root->get_qualified_as<int>("mesh.inner.value");
+	}
+	
+	
+	if(root->contains_qualified("mesh.inner.input"))
+	{
+		std::string datasetName = *root->get_qualified_as<std::string>("mesh.inner.input");
+		auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
+		// TODO: Show warning of nonexistent file reference?
+		config->mesh.inner.input = iter != datasets.end() ? *iter : nullptr;
+	}
+	
+	
+	if(root->contains_qualified("mesh.outer.value"))
+	{
+		config->mesh.outer.value = *root->get_qualified_as<int>("mesh.outer.value");
+	}
+	
+	
+	if(root->contains_qualified("mesh.outer.input"))
+	{
+		std::string datasetName = *root->get_qualified_as<std::string>("mesh.outer.input");
+		auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
+		// TODO: Show warning of nonexistent file reference?
+		config->mesh.outer.input = iter != datasets.end() ? *iter : nullptr;
+	}
+	
+	config->time.steps = root->get_qualified_as<int>("time.steps").value_or(1);
+	
+	
+	config->load.scaling = root->get_qualified_as<double>("load.scaling").value_or(1.0);
+	
+	
+	std::shared_ptr<cpptoml::table_array> history = root->get_table_array("load.history");
+	if(history)
+	{
+		// FIXME: This code assumes there are no duplicate time entries
+		for(const std::shared_ptr<cpptoml::table>& table : *history)
+		{
+			double time = table->get_as<double>("time").value_or(0.0);
+			
+			HashSet<Dataset*> datasets;
+			for(const std::string& datasetName : *table->get_array_of<std::string>("filename"))
+			{
+				auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
+				// TODO: Show warning of nonexistent file reference?
+				if(iter != datasets.end())
+					datasets.insert(*iter);
+			}
+			
+			SimulationConfig::Load::HistoryEntry entry = {time, std::move(datasets)};
+			config->load.history.push_back(entry);
+		}
+	}
+	
+	return true;
+}
+
+
+bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig* config)
+{
+	
+	std::ofstream stream(path.toStdString());
+	if(!stream.is_open())
+	{
+		QMessageBox* messageBox = new QMessageBox(this);
+		messageBox->setWindowTitle(tr("I/O error"));
+		messageBox->setText(tr("Could not open %1 for writing").arg(path));
+		messageBox->setStandardButtons(QMessageBox::StandardButton::Ok);
+		messageBox->setAttribute(Qt::WA_DeleteOnClose);
+		messageBox->open();
+		return false;
+	}
+	
+	
+	stream << "[mesh.inner]" << std::endl;
+	if(config->mesh.inner.value.has_value())
+		stream << "value = "  << config->mesh.inner.value.value()    << std::endl;
+	if(config->mesh.inner.input)
+		stream << "input = '" << config->mesh.inner.input->id << "'" << std::endl;
+	stream << std::endl;
+	
+	
+	stream << "[mesh.outer]" << std::endl;
+	if(config->mesh.outer.value.has_value())
+		stream << "value = "  << config->mesh.outer.value.value()    << std::endl;
+	if(config->mesh.outer.input)
+		stream << "input = '" << config->mesh.outer.input->id << "'" << std::endl;
+	stream << std::endl;
+	
+	
+	stream << "[time]"                         << std::endl;
+	stream << "steps = " << config->time.steps << std::endl;
+	stream << std::endl;
+	
+	
+	stream << "[load]"                           << std::endl;
+	stream << "steps = " << config->load.scaling << std::endl;
+	stream << std::endl;
+	
+	
+	struct {
+		bool operator()(const SimulationConfig::Load::HistoryEntry& a, const SimulationConfig::Load::HistoryEntry& b) {
+			return a.time > b.time;
+		}
+	} descendingOrder;
+	std::list sortedHistory = config->load.history;
+	sortedHistory.sort(descendingOrder);
+	for(const SimulationConfig::Load::HistoryEntry& entry : sortedHistory)
+	{
+		stream << "[[load.history]]"                <<        std::endl;
+		stream << "time = "      << -entry.time     <<        std::endl;
+//		stream << "filename = '" <<  entry.filename << "'" << std::endl; // TODO How to save set?
+		stream << std::endl;
+	}
+	
+	return true;
+}
+
+
+bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset)
+{
+	std::ifstream stream(path.toStdString());
+	if(!stream.is_open())
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Cannot open %1 for reading").arg(path));
+		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+		return false;
+	}
+	
+	
+	std::shared_ptr<cpptoml::table> root = nullptr;
+	try
+	{
+		cpptoml::parser parser(stream);
+		root = parser.parse();
+		stream.close();
+	}
+	catch(cpptoml::parse_exception& ex)
+	{
+		stream.close();
+		
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("Error while parsing '%1'").arg(path));
+		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+		return false;
 	}
 	
 	
@@ -934,7 +1279,7 @@ Dataset* MapWindow::deserializeDataset(const std::string& path)
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Warning"));
-		dialog->setText(tr("File: %1 is missing the 'resolution' attribute").arg(QString::fromStdString(path)));
+		dialog->setText(tr("File: %1 is missing the 'resolution' attribute").arg(path));
 		dialog->setInformativeText(tr("Default '0' will be used"));
 		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		dialog->open();
@@ -944,7 +1289,7 @@ Dataset* MapWindow::deserializeDataset(const std::string& path)
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Warning"));
-		dialog->setText(tr("File: %1 is missing the 'values' list").arg(QString::fromStdString(path)));
+		dialog->setText(tr("File: %1 is missing the 'values' list").arg(path));
 		dialog->setInformativeText(tr("Default empty list will be used"));
 		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		dialog->open();
@@ -958,44 +1303,36 @@ Dataset* MapWindow::deserializeDataset(const std::string& path)
 		QInputDialog dialog(this);
 		dialog.setInputMode(QInputDialog::TextInput);
 		dialog.setLabelText(tr("Enter name for the dataset"));
-		dialog.setTextValue(QFileInfo(QString::fromStdString(path)).baseName());
+		dialog.setTextValue(QFileInfo(path).baseName());
 		dialog.setCancelButtonText(tr("Abort"));
 //		dialog.setAttribute(Qt::WA_DeleteOnClose);
 		int resultCode = dialog.exec();
 		if(resultCode != QDialog::Accepted)
-			return nullptr;
+			return false;
 		datasetName = dialog.textValue().toStdString();
 	}
 	
-	return deserializeDataset(path, root, datasetName);
+	return deserializeDataset(path, dataset, root, datasetName);
 }
 
 
-Dataset* MapWindow::deserializeDataset(const std::string& path, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName)
+bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName)
 {
-	Dataset* dataset = nullptr;
-	try
-	{
-		dataset = new Dataset(datasetName);
-	}
-	catch(std::bad_alloc& ex)
-	{
-		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Memory allocation error"));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
-		dialog->open();
-		return nullptr;
-	}
+	dataset->id = datasetName;
 	
 	dataset->resolution  = root->get_qualified_as<int>("h3.resolution").value_or(0);
+	
 	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("").back() != 'f';
+	
 	if(dataset->isInteger)
 		dataset->defaultValue.integer = root->get_qualified_as<int64_t>("h3.default").value_or(0);
 	else
 		dataset->defaultValue.real    = root->get_qualified_as<double>("h3.default").value_or(0);
+	
 	dataset->density     = root->get_qualified_as<double>("h3.density").value_or(Dataset::NO_DENSITY);
+	
 	dataset->measureUnit = "";
+	
 	dataset->minValue    = {0};
 	dataset->maxValue    = {0};
 	
@@ -1030,22 +1367,22 @@ Dataset* MapWindow::deserializeDataset(const std::string& path, const std::share
 		}
 	}
 	
-	return dataset;
+	return true;
 }
 
 
-bool MapWindow::serializeDataset(const std::string& path, Dataset* dataset)
+bool MapWindow::serializeDataset(const QString& path, Dataset* dataset)
 {
-	if(path.empty())
+	if(path.size() == 0)
 		return false;
 
-	std::ofstream stream(path);
+	std::ofstream stream(path.toStdString());
 	if(!stream.is_open())
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
 		dialog->setText(tr("File open error"));
-		dialog->setInformativeText(tr("Cannot open %1 for writing").arg(QString::fromStdString(path)));
+		dialog->setInformativeText(tr("Cannot open %1 for writing").arg(path));
 		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		dialog->open();
 		return false;
@@ -1106,9 +1443,9 @@ bool MapWindow::serializeDataset(const std::string& path, Dataset* dataset)
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Error while writing data to %1").arg(QString::fromStdString(path)));
-		dialog->setInformativeText(tr("Operation aborted, data may be corrupted").arg(QString::fromStdString(path)));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setText(tr("Error while writing data to %1").arg(path));
+		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		return false;
 	}

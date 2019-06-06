@@ -3,56 +3,49 @@
 
 #include <QWidget>
 #include <QDialog>
+#include <QtGui/QStandardItemModel>
+#include <source/Containers.hpp>
 #include "SimulationConfig.hpp"
 
 
 class QKeyEvent;
 class QLineEdit;
+class QComboBox;
 class QToolButton;
-class QTableView;
-class GeoHistoryModel;
+class QListView;
+struct Dataset;
+struct DatasetListModel;
+struct TimesModel;
+struct TimeDatasetsModel;
 
 
 class SimulationConfigDialog : public QDialog
 {
-Q_OBJECT
-	
 public:
-	SimulationConfig configuration;
-	QString          path;
+	SimulationConfig* configuration;
 	
-public:
-	explicit SimulationConfigDialog(QWidget* parent = nullptr);
+	TimesModel*        timesModel        = nullptr;
+	TimeDatasetsModel* timeDatasetsModel = nullptr;
 	
-	SimulationConfig::Load::HistoryEntry* selection() const;
+	QLineEdit*    innerValueEdit     = nullptr;
+	QComboBox*    innerInputComboBox = nullptr;
+	QLineEdit*    outerValueEdit     = nullptr;
+	QComboBox*    outerInputComboBox = nullptr;
+	QLineEdit*    stepsEdit          = nullptr;
+	QLineEdit*    scalingEdit        = nullptr;
+	QToolButton*  timesAddButton     = nullptr;
+	QToolButton*  timesRemoveButton  = nullptr;
+	QListView*    timesListView      = nullptr;
+	QListView*    datasetsListView   = nullptr;
 	
 	
-protected:
-	void keyPressEvent(QKeyEvent* event) override;
-#if ENABLE_LINEEDIT_FILEDIALOG_ACTION
-	void onMeshFileDialogActionTriggered();
-	void onMeshFileDialogFinished(int resultCode);
-#endif
-	void onSelectionChanged(const QModelIndex& current, const QModelIndex& previous);
+	explicit SimulationConfigDialog(DatasetListModel* datasets, SimulationConfig* configuration, QWidget* parent = nullptr);
+	
+	bool eventFilter(QObject* object, QEvent* event) override;
+	void onTimeSelectionChanged(const QModelIndex& current, const QModelIndex& previous);
 	void onAddHistoryItemClicked();
 	void onRemoveHistoryItemClicked();
-	void onSaveClicked();
-	void onSaveFileDialogAccepted();
-	
-	
-protected:
-	GeoHistoryModel* historyModel = nullptr;
-	
-	QLineEdit*    innerValueEdit = nullptr;
-	QLineEdit*    innerInputEdit = nullptr;
-	QLineEdit*    outerValueEdit = nullptr;
-	QLineEdit*    outerInputEdit = nullptr;
-	QLineEdit*    stepsEdit      = nullptr;
-	QLineEdit*    scalingEdit    = nullptr;
-	QTableView*   historyTable   = nullptr;
-	
-	QToolButton*  historyAddButton    = nullptr;
-	QToolButton*  historyRemoveButton = nullptr;
+	void onOkClicked();
 };
 
 

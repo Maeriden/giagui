@@ -15,24 +15,9 @@ struct Dataset;
 
 class DatasetControlWidget : public QWidget
 {
-Q_OBJECT
-
+	Q_OBJECT
 public:
-	explicit DatasetControlWidget(QWidget* parent = nullptr);
 	
-	void setDataSource(Dataset* newDataset);
-	void refreshViews();
-	
-	
-protected:
-	void onResolutionSpinboxChanged(int newResolution);
-	void onDefaultEditFinished();
-	void onDensityEditFinished();
-	void onMinValueEditFinished();
-	void onMaxValueEditFinished();
-	
-	
-protected:
 	Dataset* dataset = nullptr;
 	
 	QIntValidator    integerValidator;
@@ -50,6 +35,19 @@ protected:
 	int densityDecimals  = 6;
 	int minValueDecimals = 6;
 	int maxValueDecimals = 6;
+	
+	
+	explicit DatasetControlWidget(QWidget* parent = nullptr);
+	
+	void setDataSource(Dataset* dataset);
+	void refreshViews(Dataset* dataset);
+	
+	
+	void onResolutionSpinboxChanged(int newResolution);
+	void onDefaultEditFinished();
+	void onDensityEditFinished();
+	void onMinValueEditFinished();
+	void onMaxValueEditFinished();
 	
 	
 signals:

@@ -9,14 +9,13 @@ class QPushButton;
 class QToolButton;
 
 struct Dataset;
-class DatasetListModel;
+struct DatasetListModel;
 
 
 class DatasetListWidget : public QWidget
 {
 	Q_OBJECT
-	
-protected:
+public:
 	DatasetListModel* datasets = nullptr;
 	
 	QListView*   listView     = nullptr;
@@ -24,13 +23,11 @@ protected:
 	QToolButton* deleteButton = nullptr;
 	
 	
-public:
 	explicit DatasetListWidget(DatasetListModel* datasets, QWidget* parent = nullptr);
 	
 	Dataset* selection() const;
 	
 	
-protected:
 	void keyPressEvent(QKeyEvent* event) override;
 	
 	void onSelectionChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -44,7 +41,7 @@ protected:
 	
 signals:
 	void itemCreated(Dataset* dataset);
-	void itemSelected(Dataset* dataset);
+	void itemSelected(Dataset* current, Dataset* previous);
 	void itemDeleted(Dataset* dataset);
 };
 

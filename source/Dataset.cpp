@@ -5,8 +5,8 @@
 #include "MapUtils.hpp"
 
 
-Dataset::Dataset(DatasetID_t  id) :
-	id(std::move(id)),
+Dataset::Dataset() :
+	id(""),
 	resolution(0),
 	defaultValue{0},
 	density(NO_DENSITY),

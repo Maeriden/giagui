@@ -2,12 +2,16 @@
 #define GIAGUI_MAPUTILS_HPP
 
 
+#include <cmath>
 #include <QRectF>
 #include <QSizeF>
 #include <QString>
 #include <h3/h3api.h>
 
 #include "GeoValue.hpp"
+
+#define _STR(x) #x
+#define STR(x) _STR(x)
 
 
 #define PI 3.14159265358979323846

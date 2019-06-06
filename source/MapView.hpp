@@ -52,8 +52,8 @@ protected:
 	QPen   datasetPen   = QPen(Qt::PenStyle::NoPen);
 	QBrush datasetBrush = QBrush(Qt::BrushStyle::SolidPattern);
 	
-	QPen   polyfillPen   = QPen(QColor(0, 0, 0), 1.0, Qt::PenStyle::DotLine);
-	QBrush polyfillBrush = QBrush(Qt::BrushStyle::NoBrush);
+	QPen   gridPen   = QPen(QColor(0, 0, 0), 1.0);
+	QBrush gridBrush = QBrush(Qt::BrushStyle::NoBrush);
 	
 	QPen   highlightPen   = QPen(QColor(0, 0, 0), 1.0);
 	QBrush highlightBrush = QBrush(Qt::BrushStyle::NoBrush);

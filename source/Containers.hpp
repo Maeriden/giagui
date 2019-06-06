@@ -20,6 +20,22 @@ struct HashMap : public std::unordered_map<K, V>
 			return &it->second;
 		return nullptr;
 	}
+	
+	inline const V* get(const K& key) const
+	{
+		auto it = this->find(key);
+		if(it != this->end())
+			return &it->second;
+		return nullptr;
+	}
+	
+	inline const V& get_or(const K& key, const V& fallback) const
+	{
+		auto it = this->find(key);
+		if(it != this->end())
+			return it->second;
+		return fallback;
+	}
 };
 
 #endif //GIAGUI_CONTAINERS_HPP

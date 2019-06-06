@@ -3,8 +3,10 @@
 
 
 #include <optional>
-#include <vector>
+#include <list>
+#include "Containers.hpp"
 
+struct Dataset;
 
 struct SimulationConfig
 {
@@ -12,14 +14,14 @@ struct SimulationConfig
 	{
 		struct Inner
 		{
-			std::optional<int>         value;
-			std::optional<std::string> input;
+			std::optional<int> value;
+			Dataset*           input = nullptr;
 		} inner;
 		
 		struct Outer
 		{
-			std::optional<int>         value;
-			std::optional<std::string> input;
+			std::optional<int> value;
+			Dataset*           input = nullptr;
 		} outer;
 	} mesh;
 	
@@ -32,13 +34,16 @@ struct SimulationConfig
 	{
 		struct HistoryEntry
 		{
-			float       time;
-			std::string filename;
+			double            time;
+			HashSet<Dataset*> datasets;
 		};
 		
-		float scaling = 1.0;
-		std::vector<HistoryEntry> history;
+		float                   scaling = 1.0;
+		std::list<HistoryEntry> history;
 	} load;
+	
+	
+	SimulationConfig& operator=(SimulationConfig&& that) noexcept;
 };
 
 #endif //GIAGUI_SIMULATIONCONFIG_HPP
