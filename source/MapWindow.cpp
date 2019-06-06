@@ -1181,18 +1181,22 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 
 bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig* config)
 {
-	
-	std::ofstream stream(path.toStdString());
-	if(!stream.is_open())
+	std::ofstream fileStream(path.toStdString());
+	if(!fileStream.is_open())
 	{
-		QMessageBox* messageBox = new QMessageBox(this);
-		messageBox->setWindowTitle(tr("I/O error"));
-		messageBox->setText(tr("Could not open %1 for writing").arg(path));
-		messageBox->setStandardButtons(QMessageBox::StandardButton::Ok);
-		messageBox->setAttribute(Qt::WA_DeleteOnClose);
-		messageBox->open();
+		char*   errString = strerror(errno);
+		QString text      = tr("Cannot open '%1' for writing: %2").arg(path).arg(errString);
+		
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(text);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
 		return false;
 	}
+	
+	std::stringstream stream;
+	stream << std::fixed << std::showpoint;
 	
 	
 	stream << "[mesh.inner]" << std::endl;
@@ -1226,7 +1230,8 @@ bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig*
 			return a.time > b.time;
 		}
 	} descendingOrder;
-	std::list sortedHistory = config->load.history;
+	
+	std::list<SimulationConfig::Load::HistoryEntry> sortedHistory = config->load.history;
 	sortedHistory.sort(descendingOrder);
 	for(const SimulationConfig::Load::HistoryEntry& entry : sortedHistory)
 	{
@@ -1236,6 +1241,20 @@ bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig*
 		stream << std::endl;
 	}
 	
+	
+	fileStream << stream.str();
+	if(fileStream.fail())
+	{
+		char*   errString = strerror(errno);
+		QString text      = tr("Cannot write data to '%1': %2").arg(path).arg(errString);
+		
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(text);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+		return false;
+	}
 	return true;
 }
 
@@ -1245,10 +1264,12 @@ bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset)
 	std::ifstream stream(path.toStdString());
 	if(!stream.is_open())
 	{
+		char*   errString = strerror(errno);
+		QString text      = tr("Cannot open '%1' for reading: %2").arg(path).arg(errString);
+		
 		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Cannot open %1 for reading").arg(path));
-		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(text);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		return false;
@@ -1267,85 +1288,34 @@ bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset)
 		stream.close();
 		
 		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Error while parsing '%1'").arg(path));
-		dialog->setInformativeText(tr("Operation aborted"));
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(tr("Cannot parse '%1'").arg(path));
+		dialog->setInformativeText(ex.what());
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		return false;
 	}
 	
 	
-	if(!root->contains_qualified("h3.resolution"))
-	{
-		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Warning"));
-		dialog->setText(tr("File: %1 is missing the 'resolution' attribute").arg(path));
-		dialog->setInformativeText(tr("Default '0' will be used"));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
-		dialog->open();
-	}
-	
-	if(!root->contains_qualified("h3.values"))
-	{
-		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Warning"));
-		dialog->setText(tr("File: %1 is missing the 'values' list").arg(path));
-		dialog->setInformativeText(tr("Default empty list will be used"));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
-		dialog->open();
-	}
-	
-	
-	std::string datasetName = root->get_qualified_as<std::string>("giagui.name").value_or("");
-	if(datasetName.empty())
-	{
-		// NOTE: Use synchronous dialog because async is a huge pain
-		QInputDialog dialog(this);
-		dialog.setInputMode(QInputDialog::TextInput);
-		dialog.setLabelText(tr("Enter name for the dataset"));
-		dialog.setTextValue(QFileInfo(path).baseName());
-		dialog.setCancelButtonText(tr("Abort"));
-//		dialog.setAttribute(Qt::WA_DeleteOnClose);
-		int resultCode = dialog.exec();
-		if(resultCode != QDialog::Accepted)
-			return false;
-		datasetName = dialog.textValue().toStdString();
-	}
-	
-	return deserializeDataset(path, dataset, root, datasetName);
-}
-
-
-bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName)
-{
-	dataset->id = datasetName;
-	
+	dataset->id          = root->get_qualified_as<std::string>("giagui.name").value_or(QFileInfo(path).baseName().toStdString());
 	dataset->resolution  = root->get_qualified_as<int>("h3.resolution").value_or(0);
-	
-	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("").back() != 'f';
-	
-	if(dataset->isInteger)
-		dataset->defaultValue.integer = root->get_qualified_as<int64_t>("h3.default").value_or(0);
-	else
-		dataset->defaultValue.real    = root->get_qualified_as<double>("h3.default").value_or(0);
-	
+	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("").back() == 'i';
 	dataset->density     = root->get_qualified_as<double>("h3.density").value_or(Dataset::NO_DENSITY);
-	
-	dataset->measureUnit = "";
-	
+	dataset->measureUnit = ""; // TODO: This is not really useful. Remove it?
 	dataset->minValue    = {0};
 	dataset->maxValue    = {0};
 	
 	if(dataset->isInteger)
 	{
+		dataset->defaultValue.integer = root->get_qualified_as<int64_t>("h3.default").value_or(0);
+		
 		for(auto& [key, val] : *root->get_table_qualified("h3.values"))
 		{
 			H3Index  index    = std::stoull(key, nullptr, 16);
 			GeoValue geoValue = {0};
 			geoValue.integer = val->as<int64_t>()->get();
 			dataset->geoValues.insert({index, geoValue});
-				
+			
 			if(dataset->minValue.integer > geoValue.integer)
 				dataset->minValue.integer = geoValue.integer;
 			if(dataset->maxValue.integer < geoValue.integer)
@@ -1354,6 +1324,8 @@ bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset, const 
 	}
 	else
 	{
+		dataset->defaultValue.real = root->get_qualified_as<double>("h3.default").value_or(0);
+		
 		for(auto& [key, val] : *root->get_table_qualified("h3.values"))
 		{
 			H3Index  index    = std::stoull(key, nullptr, 16);
@@ -1376,18 +1348,22 @@ bool MapWindow::serializeDataset(const QString& path, Dataset* dataset)
 {
 	if(path.size() == 0)
 		return false;
-
-	std::ofstream stream(path.toStdString());
-	if(!stream.is_open())
+	
+	std::ofstream fileStream(path.toStdString());
+	if(!fileStream.is_open())
 	{
+		char*   errString = strerror(errno);
+		QString text      = tr("Cannot open '%1' for writing: %2").arg(path).arg(errString);
+		
 		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("File open error"));
-		dialog->setInformativeText(tr("Cannot open %1 for writing").arg(path));
-		dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(text);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		return false;
 	}
+	
+	std::stringstream stream;
 	stream << std::fixed << std::showpoint;
 	
 	
@@ -1440,12 +1416,15 @@ bool MapWindow::serializeDataset(const QString& path, Dataset* dataset)
 	}
 	
 	
-	if(stream.fail())
+	fileStream << stream.str();
+	if(fileStream.fail())
 	{
+		char*   errString = strerror(errno);
+		QString text      = tr("Cannot write data to '%1': %2").arg(path).arg(errString);
+		
 		QMessageBox* dialog = new QMessageBox(this);
-		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Error while writing data to %1").arg(path));
-		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setWindowTitle(tr("File error"));
+		dialog->setText(text);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		return false;

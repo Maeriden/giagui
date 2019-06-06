@@ -138,7 +138,6 @@ protected:
 	bool serializeSimulationConfig(const QString& path, SimulationConfig* config);
 	
 	bool deserializeDataset(const QString& path, Dataset* dataset);
-	bool deserializeDataset(const QString& path, Dataset* dataset, const std::shared_ptr<cpptoml::table>& root, const std::string& datasetName);
 	bool serializeDataset(const QString& path, Dataset* dataset);
 };
 
