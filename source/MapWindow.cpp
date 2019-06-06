@@ -1235,9 +1235,14 @@ bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig*
 	sortedHistory.sort(descendingOrder);
 	for(const SimulationConfig::Load::HistoryEntry& entry : sortedHistory)
 	{
-		stream << "[[load.history]]"                <<        std::endl;
-		stream << "time = "      << -entry.time     <<        std::endl;
-//		stream << "filename = '" <<  entry.filename << "'" << std::endl; // TODO How to save set?
+		stream << "[[load.history]]"       << std::endl;
+		stream << "time = " << -entry.time << std::endl;
+		stream << "datasets = [";
+		for(Dataset* dataset : entry.datasets)
+		{
+			stream << "'" << dataset->id << "',";
+		}
+		stream << "]" << std::endl;
 		stream << std::endl;
 	}
 	
