@@ -592,7 +592,7 @@ void MapWindow::saveProjectBegin(const QString& directoryPath)
 	{
 		QFileDialog* dialog = new QFileDialog(this);
 		dialog->setWindowTitle(tr("Save Project"));
-		dialog->setAcceptMode(QFileDialog::AcceptSave);
+		dialog->setAcceptMode(QFileDialog::AcceptOpen);
 		dialog->setFileMode(QFileDialog::FileMode::Directory);
 		dialog->setOption(QFileDialog::Option::ShowDirsOnly, true);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
