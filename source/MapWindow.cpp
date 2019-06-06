@@ -1216,8 +1216,8 @@ bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig*
 	stream << std::endl;
 	
 	
-	stream << "[load]"                           << std::endl;
-	stream << "steps = " << config->load.scaling << std::endl;
+	stream << "[load]"                             << std::endl;
+	stream << "scaling = " << config->load.scaling << std::endl;
 	stream << std::endl;
 	
 	
