@@ -32,12 +32,13 @@ static SimulationConfig globalSimulationConfig;
 MapWindow::MapWindow(QWidget* parent) : QMainWindow(parent)
 {
 	datasets = new DatasetListModel(this);
-#if 1
-	datasets->appendItem(new Dataset("prova1", true, false));
-	datasets->appendItem(new Dataset("prova2", true, false));
-#endif
-	resize(1000, 750);
 	
+#if !DISABLE_CREATE_INNER_AND_OUTER_DATASETS_AT_STARTUP
+	datasets->appendItem(new Dataset("inner", false, true));
+	datasets->appendItem(new Dataset("outer", false, true));
+#endif
+	
+	resize(1000, 750);
 	
 	QSplitter* hSplitter = new QSplitter(Qt::Orientation::Horizontal, this);
 	setCentralWidget(hSplitter);
