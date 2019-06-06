@@ -353,7 +353,13 @@ void MapView::drawForeground(QPainter* painter, const QRectF& exposed)
 		}
 		
 #if !DISABLE_DRAW_HIGHLIGHTED_INDICES_CENTER
-		highlightPen.setWidthF(4);
+		
+		// NOTE: Dots are too small on high DPI (retina) displays. They have a scale factor of 1/2 so scale dot size by 2
+#ifdef __APPLE__
+		highlightPen.setWidthF(10);
+#else
+		highlightPen.setWidthF(5);
+#endif
 		painter->setPen(highlightPen);
 		
 		for(H3Index index : *highlightIndices)
