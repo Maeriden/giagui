@@ -568,7 +568,7 @@ void SimulationConfigDialog::onOkClicked()
 	if(scalingEdit->text().size() > 0)
 	{
 		bool ok;
-		double value = stepsEdit->text().toDouble(&ok);
+		double value = scalingEdit->text().toDouble(&ok);
 		if(ok)
 			configuration->load.scaling = value;
 	}
