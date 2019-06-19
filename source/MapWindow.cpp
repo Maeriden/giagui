@@ -1159,18 +1159,18 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 		// FIXME: This code assumes there are no duplicate time entries
 		for(const std::shared_ptr<cpptoml::table>& table : *history)
 		{
-			double time = table->get_as<double>("time").value_or(0.0);
+			double entryTime = table->get_as<double>("time").value_or(0.0);
 			
-			HashSet<Dataset*> datasets;
-			for(const std::string& datasetName : *table->get_array_of<std::string>("filename"))
+			HashSet<Dataset*> entryDatasets;
+			for(const std::string& entryDatasetName : *table->get_array_of<std::string>("filename"))
 			{
-				auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
+				auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(entryDatasetName));
 				// TODO: Show warning of nonexistent file reference?
 				if(iter != datasets.end())
-					datasets.insert(*iter);
+					entryDatasets.insert(*iter);
 			}
 			
-			SimulationConfig::Load::HistoryEntry entry = {time, std::move(datasets)};
+			SimulationConfig::Load::HistoryEntry entry = {entryTime, std::move(entryDatasets)};
 			config->load.history.push_back(entry);
 		}
 	}
