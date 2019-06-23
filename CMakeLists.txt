@@ -47,7 +47,9 @@ set(SOURCE_FILES
     source/DatasetListWidget.cpp source/DatasetListWidget.hpp
     source/DatasetControlWidget.cpp source/DatasetControlWidget.hpp
     source/dialogs/SimulationConfigDialog.cpp source/dialogs/SimulationConfigDialog.hpp
-    source/dialogs/DatasetCreateDialog.cpp source/dialogs/DatasetCreateDialog.hpp)
+    source/dialogs/DatasetCreateDialog.cpp source/dialogs/DatasetCreateDialog.hpp
+    source/preprocess/H3Map.cpp source/preprocess/H3Map.hpp
+    source/preprocess/Project.cpp source/preprocess/Project.hpp)
 
 set(RESOURCE_FILES
 	resources/resources.qrc)
