@@ -1153,13 +1153,14 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 	config->load.scaling = root->get_qualified_as<double>("load.scaling").value_or(1.0);
 	
 	
-	std::shared_ptr<cpptoml::table_array> history = root->get_table_array("load.history");
+	std::shared_ptr<cpptoml::table_array> history = root->get_table_array_qualified("load.history");
 	if(history)
 	{
 		// FIXME: This code assumes there are no duplicate time entries
 		for(const std::shared_ptr<cpptoml::table>& table : *history)
 		{
-			double entryTime = table->get_as<double>("time").value_or(0.0);
+			config->load.history.push_back({});
+			config->load.history.back().time = table->get_as<double>("time").value_or(0.0);
 			
 			HashSet<Dataset*> entryDatasets;
 			for(const std::string& entryDatasetName : *table->get_array_of<std::string>("filename"))
@@ -1167,11 +1168,9 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 				auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(entryDatasetName));
 				// TODO: Show warning of nonexistent file reference?
 				if(iter != datasets.end())
-					entryDatasets.insert(*iter);
+					config->load.history.back().datasets.insert(*iter);
 			}
 			
-			SimulationConfig::Load::HistoryEntry entry = {entryTime, std::move(entryDatasets)};
-			config->load.history.push_back(entry);
 		}
 	}
 	
@@ -1235,9 +1234,9 @@ bool MapWindow::serializeSimulationConfig(const QString& path, SimulationConfig*
 	sortedHistory.sort(descendingOrder);
 	for(const SimulationConfig::Load::HistoryEntry& entry : sortedHistory)
 	{
-		stream << "[[load.history]]"       << std::endl;
-		stream << "time = " << -entry.time << std::endl;
-		stream << "datasets = [";
+		stream << "[[load.history]]"      << std::endl;
+		stream << "time = " << entry.time << std::endl;
+		stream << "filename = [";
 		for(Dataset* dataset : entry.datasets)
 		{
 			stream << "'" << dataset->id << "',";
