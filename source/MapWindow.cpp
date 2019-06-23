@@ -22,6 +22,7 @@
 #include "models/DatasetListModel.hpp"
 #include "dialogs/SimulationConfigDialog.hpp"
 #include "dialogs/DatasetCreateDialog.hpp"
+#include "preprocess/Project.hpp"
 
 
 static SimulationConfig globalSimulationConfig;
@@ -154,6 +155,14 @@ void MapWindow::addActionsToMenuBar(QMenuBar* menuBar)
 		action->setText(tr("Save Project As..."));
 		action->setShortcuts(QKeySequence::StandardKey::SaveAs);
 		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionSaveProjectAs);
+		menuFile->addAction(action);
+	}
+	menuFile->addSeparator();
+	{
+		QAction* action = new QAction(this);
+		action->setText(tr("Export Simulation..."));
+		action->setStatusTip(tr("Combine all datasets into a format suited for the simulation software"));
+		QObject::connect(action, &QAction::triggered, this, &MapWindow::onActionExportSimulation);
 		menuFile->addAction(action);
 	}
 	menuFile->addSeparator();
@@ -656,6 +665,65 @@ void MapWindow::saveProjectEnd(const QString& directoryPath)
 		dialog->setWindowTitle(tr("Error"));
 		dialog->setText(tr("Error while saving %1").arg(filePath));
 		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+	}
+}
+
+
+void MapWindow::onActionExportSimulation()
+{
+	if(windowFilePath().isEmpty())
+	{
+		// Ask to save project
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(tr("The project must be saved to disk before it can be exported."));
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->open();
+		return;
+	}
+	else
+	{
+		exportSimulationBegin(windowFilePath());
+	}
+}
+
+
+void MapWindow::exportSimulationBegin(const QString& sourcePath)
+{
+	QFileDialog* dialog = new QFileDialog(this);
+	dialog->setWindowTitle(tr("Export Simulation"));
+	dialog->setAcceptMode(QFileDialog::AcceptOpen);
+	dialog->setFileMode(QFileDialog::FileMode::Directory);
+	dialog->setOption(QFileDialog::Option::ShowDirsOnly, true);
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	QObject::connect(dialog, &QFileDialog::accepted, this, &MapWindow::onExportSimulationDialogAccepted);
+	dialog->setProperty("sourcePath", sourcePath);
+	dialog->open();
+}
+
+
+void MapWindow::onExportSimulationDialogAccepted()
+{
+	QFileDialog* dialog = static_cast<QFileDialog*>(sender());
+	const QString& sourcePath = dialog->property("sourcePath").toString();
+	QString        targetPath = dialog->selectedFiles().first();
+	assert(targetPath.size() > 0);
+	exportSimulationEnd(sourcePath, targetPath);
+}
+
+
+void MapWindow::exportSimulationEnd(const QString& sourcePath, const QString& targetPath)
+{
+	poglar::Project exporter = poglar::Project(sourcePath);
+	bool success = exporter.export_to(targetPath);
+	
+	if(!success)
+	{
+		QMessageBox* dialog = new QMessageBox(this);
+		dialog->setWindowTitle(tr("Error"));
+		dialog->setText(exporter.errorMessage);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 	}

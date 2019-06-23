@@ -106,6 +106,11 @@ protected:
 	void onSaveProjectDialogAccepted();
 	void saveProjectEnd(const QString& path);
 	
+	void onActionExportSimulation();
+	void exportSimulationBegin(const QString& sourcePath);
+	void onExportSimulationDialogAccepted();
+	void exportSimulationEnd(const QString& sourcePath, const QString& targetPath);
+	
 	void onActionConfigureSimulation();
 	
 	void onActionZoomOut();
