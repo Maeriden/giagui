@@ -53,25 +53,26 @@ DatasetListWidget::DatasetListWidget(DatasetListModel* datasets, QWidget* parent
 	listView = new QListView(this);
 	listView->setModel(datasets);
 	listView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+	listView->setSelectionRectVisible(true);
 	listView->setMaximumSize(180, 180);
 	listView->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-//	QObject::connect(listView, &QListView::clicked, this, &DatasetListWidget::onListItemClicked);
-	QObject::connect(listView->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &DatasetListWidget::onSelectionChanged);
+	QObject::connect(listView->selectionModel(), &QItemSelectionModel::currentChanged, this, &DatasetListWidget::onCurrentItemChanged);
 	layout->addWidget(listView);
 	
 	layout->setStretchFactor(listView, 0);
 	layout->setAlignment(listView, Qt::AlignTop);
 	
 	layout->addStretch(1);
+	
+	
+	QObject::connect(datasets, &DatasetListModel::modelReset, this, &DatasetListWidget::onModelReset);
 }
 
 
 Dataset* DatasetListWidget::selection() const
 {
-	Dataset* dataset = nullptr;
 	QModelIndex selectionIndex = listView->currentIndex();
-	if(selectionIndex.isValid())
-		dataset = datasets->get(selectionIndex);
+	Dataset* dataset = datasets->get(selectionIndex);
 	return dataset;
 }
 
@@ -87,9 +88,18 @@ void DatasetListWidget::keyPressEvent(QKeyEvent* event)
 }
 
 
-void DatasetListWidget::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous)
+void DatasetListWidget::onModelReset()
 {
-	assert(current != previous);
+//	listView->blockSignals(true);
+//	// FIXME: For some reason this doesn't actually clear the selection...
+//	listView->clearSelection();
+//	listView->blockSignals(false);
+	emit itemSelected(nullptr, nullptr);
+}
+
+
+void DatasetListWidget::onCurrentItemChanged(const QModelIndex& current, const QModelIndex& previous)
+{
 	Dataset* currentDataset  = datasets->get(current);
 	Dataset* previousDataset = datasets->get(previous);
 	deleteButton->setEnabled(currentDataset != nullptr);

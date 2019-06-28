@@ -30,7 +30,8 @@ public:
 	
 	void keyPressEvent(QKeyEvent* event) override;
 	
-	void onSelectionChanged(const QModelIndex& current, const QModelIndex& previous);
+	void onModelReset();
+	void onCurrentItemChanged(const QModelIndex& current, const QModelIndex& previous);
 	
 	void onCreateDatasetClicked();
 	void onCreateDatasetDialogFinished(int resultCode);
