@@ -62,6 +62,9 @@ public:
 	
 	MapTool mapTool = MapTool::Mark;
 	
+	// Hack to store file to load. Used when loading a project and the user chooses to save the old project before loading 
+	QString loadPath;
+	
 	
 	DatasetListWidget*    datasetListWidget    = nullptr;
 	DatasetControlWidget* datasetControlWidget = nullptr;
@@ -90,6 +93,7 @@ public:
 	
 	void onActionOpenProject();
 	void onOpenProjectDialogAccepted();
+	void openProject(const QString& directoryPath);
 	
 	void onActionSaveFile();
 	void onActionSaveAs();

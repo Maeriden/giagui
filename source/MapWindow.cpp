@@ -405,8 +405,6 @@ void MapWindow::onOpenFileDialogAccepted()
 
 void MapWindow::onActionOpenProject()
 {
-	// TODO: Show unsaved changes dialog
-	
 	QFileDialog* dialog = new QFileDialog(this);
 	dialog->setWindowTitle(tr("Open Project"));
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
@@ -426,6 +424,25 @@ void MapWindow::onOpenProjectDialogAccepted()
 	QString directoryPath = dialog->selectedFiles().first();
 	
 	
+	if(isWindowModified())
+	{
+		QString question = tr("There are unsaved changes. Do you want to save?");
+		int reply = QMessageBox::question(this, QString(), question);
+		if(reply == QMessageBox::Yes)
+		{
+			// FIXME: This is an hack and it should die suffering
+			loadPath = directoryPath;
+			onActionSaveProject();
+			return;
+		}
+	}
+	
+	openProject(directoryPath);
+}
+
+
+void MapWindow::openProject(const QString& directoryPath)
+{
 	QDir    directory = QDir(directoryPath);
 	QString filePath;
 	bool    success = true;
@@ -658,6 +675,13 @@ void MapWindow::saveProjectEnd(const QString& directoryPath)
 	{
 		setWindowFilePath(directoryPath);
 		setWindowModified(false);
+		
+		
+		// FIXME: This is an hack and it should die suffering
+		if(loadPath.size() > 0)
+		{
+			openProject(loadPath);
+		}
 	}
 	else
 	{
@@ -668,6 +692,8 @@ void MapWindow::saveProjectEnd(const QString& directoryPath)
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 	}
+	
+	loadPath = "";
 }
 
 
