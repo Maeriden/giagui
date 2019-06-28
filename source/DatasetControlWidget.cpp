@@ -247,7 +247,6 @@ void DatasetControlWidget::onMinValueEditFinished()
 	QString textMin = minValueLineEdit->text();
 	QString textMax = maxValueLineEdit->text();
 	
-	// TODO: Clamp values
 	bool isValidNumber;
 	GeoValue minValue = toGeoValue(textMin, dataset->isInteger, &isValidNumber);
 	if(isValidNumber)
@@ -305,7 +304,6 @@ void DatasetControlWidget::onMaxValueEditFinished()
 	QString textMin = minValueLineEdit->text();
 	QString textMax = maxValueLineEdit->text();
 	
-	// TODO: Clamp values
 	bool isValidNumber;
 	GeoValue minValue = toGeoValue(textMin, dataset->isInteger, &isValidNumber);
 	if(isValidNumber)

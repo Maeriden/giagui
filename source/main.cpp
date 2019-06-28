@@ -8,8 +8,6 @@
  * For any question write to bondi.1701014@studenti.uniroma1.it
  *********************************************************************/
 
-// TODO: https://www.walletfox.com/course/qtcheckablelist.php
-
 
 int main(int argc, char *argv[])
 {

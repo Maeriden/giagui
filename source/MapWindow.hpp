@@ -71,17 +71,15 @@ public:
 	QLabel*               statusLabel          = nullptr;
 	QToolBar*             toolBar              = nullptr;
 	
-public:
+	
 	explicit MapWindow(QWidget* parent = nullptr);
 	
 	
-private:
 	void addActionsToMenuBar(QMenuBar* menuBar);
 	void addActionsToToolBar(QToolBar* toolBar);
 	void addWidgetsToCentralWidget(QWidget* centralWidget);
 	
 	
-protected:
 	bool eventFilter(QObject* o, QEvent* e) override;
 	
 	void keyPressEvent(QKeyEvent *event) override;
