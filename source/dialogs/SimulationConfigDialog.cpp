@@ -295,7 +295,6 @@ struct TimeDatasetsModel : QAbstractListModel
 };
 
 
-// TODO: Use a copy of configuration and set values on accept
 SimulationConfigDialog::SimulationConfigDialog(DatasetListModel* datasetsModel, SimulationConfig* configuration, QWidget* parent) : QDialog(parent),
 	configuration(configuration)
 {
@@ -426,21 +425,6 @@ SimulationConfigDialog::SimulationConfigDialog(DatasetListModel* datasetsModel, 
 			datasetsListView = new QListView(this);
 			datasetsListView->setModel(timeDatasetsModel);
 			listsLayout->addWidget(datasetsListView);
-			
-			
-//			QSortFilterProxyModel* sortedHistoryModel = new QSortFilterProxyModel(this);
-//			sortedHistoryModel->setSourceModel(historyModel);
-//			sortedHistoryModel->setDynamicSortFilter(true);
-//			
-//			historyTable = new QTableView(this);
-//			historyTable->setModel(sortedHistoryModel);
-//			historyTable->horizontalHeader()->setStretchLastSection(true);
-//			historyTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
-//			historyTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
-//			historyTable->setSortingEnabled(true);
-//			historyTable->sortByColumn(0, Qt::SortOrder::AscendingOrder);
-//			QObject::connect(historyTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &SimulationConfigDialog::onSelectionChanged);
-//			historyBoxLayout->addWidget(historyTable);
 		}
 	}
 	mainLayoutRow += 1;

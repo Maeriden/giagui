@@ -79,10 +79,9 @@ void MapWindow::addWidgetsToCentralWidget(QWidget* centralWidget)
 		QSplitter* group = new QSplitter(Qt::Orientation::Vertical, centralWidget);
 		
 		datasetListWidget = new DatasetListWidget(datasets, group);
-		QObject::connect(datasetListWidget, &DatasetListWidget::itemCreated, this, &MapWindow::onDatasetListItemCreated);
-		QObject::connect(datasetListWidget, &DatasetListWidget::itemSelected, this,
-		                 &MapWindow::onDatasetListItemSelected);
-		QObject::connect(datasetListWidget, &DatasetListWidget::itemDeleted, this, &MapWindow::onDatasetListItemDeleted);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemCreated,  this, &MapWindow::onDatasetListItemCreated);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemSelected, this, &MapWindow::onDatasetListItemSelected);
+		QObject::connect(datasetListWidget, &DatasetListWidget::itemDeleted,  this, &MapWindow::onDatasetListItemDeleted);
 		
 		datasetControlWidget = new DatasetControlWidget(group);
 		QObject::connect(datasetControlWidget, &DatasetControlWidget::resolutionChanged, this, &MapWindow::onDatasetResolutionChanged);
@@ -496,8 +495,8 @@ void MapWindow::openProject(const QString& directoryPath)
 	
 	if(success)
 	{
-		globalSimulationConfig = std::move(config);
 		datasets->reset(std::move(datasetList));
+		globalSimulationConfig = std::move(config);
 		
 		setWindowFilePath(directoryPath);
 		setWindowModified(false);
@@ -506,8 +505,8 @@ void MapWindow::openProject(const QString& directoryPath)
 	{
 		QMessageBox* dialog = new QMessageBox(this);
 		dialog->setWindowTitle(tr("Error"));
-		dialog->setText(tr("Error while saving %1").arg(filePath));
-		dialog->setInformativeText(tr("Operation aborted, data may be corrupted"));
+		dialog->setText(tr("Error while loading %1").arg(filePath));
+		dialog->setInformativeText(tr("Operation aborted"));
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
 		dialog->open();
 		
@@ -809,7 +808,6 @@ void MapWindow::onDatasetListItemCreated(Dataset* dataset)
 
 void MapWindow::onDatasetListItemSelected(Dataset* currentDataset, Dataset* previousDataset)
 {
-	
 	if(currentDataset)
 	{
 		highlightedIndices.clear();
@@ -851,7 +849,6 @@ void MapWindow::onDatasetResolutionChanged(Dataset* dataset, int oldResolution)
 {
 	assert(IS_VALID_RESOLUTION(dataset->resolution));
 	
-	// TODO: Profile this to see if it's worth doing the operation in another thread
 	try
 	{
 		if(dataset->resolution < oldResolution)
