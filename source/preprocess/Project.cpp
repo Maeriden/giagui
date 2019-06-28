@@ -1,9 +1,33 @@
 #include "preprocess/Project.hpp"
+#include "preprocess/H3Map.hpp"
 #include <cpptoml.h>
 #include <QApplication> // tr()
+#include <iostream>
 
 namespace poglar
 {
+  namespace {
+    struct HistoryEntry {
+      HistoryEntry(const double time,
+                   const std::vector<std::string> &datasets)
+      : time(time), datasets(datasets) {}
+
+      double time;
+      std::vector<std::string> datasets;
+    };
+
+    bool SortByTime(const HistoryEntry &a, const HistoryEntry &b)
+    {
+      return a.time < b.time;
+    }
+
+    double RescaleTime(const double &time)
+    {
+      return -time * 1000 * 31536000 / 2e11;
+    }
+  } /* <anon> */
+	
+	
 	Project::Project(const QDir &path)
 	: path_(path)
 	{}
@@ -65,63 +89,72 @@ namespace poglar
 		
 		if(auto name = root->get_qualified_as<std::string>("mesh.inner.input"))
 		{
-			stream << "input = " << *name << "\n";
-			
-			std::ifstream sourceFile(*name, std::ios::binary);
+			// Copy content of input file into poglar directory 
+			QString sourcePath = path_.filePath(QString::fromStdString(*name + ".h3"));
+			std::ifstream sourceFile(sourcePath.toStdString(), std::ios::binary);
 			if(!sourceFile.is_open())
 			{
-				errorMessage = QApplication::tr("Failed to open '%1'").arg(QString::fromStdString(*name));
+				errorMessage = QApplication::tr("Failed to open '%1'")
+				       .arg(sourcePath);
 				return false;
 			}
 			
-			// Copy content of input file into poglar directory 
-			std::string   targetPath = destination.filePath(QString::fromStdString("mesh/" + *name)).toStdString();
-			std::ofstream targetFile(targetPath, std::ios::binary);
+			QString targetPath = destination.filePath(QString::fromStdString("mesh/" + *name + ".h3"));
+			std::ofstream targetFile(targetPath.toStdString(), std::ios::binary);
 			if(!targetFile.is_open())
 			{
-				errorMessage = QApplication::tr("Failed to open '%1'").arg(QString::fromStdString(targetPath));
+				errorMessage = QApplication::tr("Failed to open '%1'")
+				       .arg(targetPath);
 				return false;
 			}
 			
 			targetFile << sourceFile.rdbuf();
 			if(targetFile.fail())
 			{
-				errorMessage = QApplication::tr("Failed to copy '%1' to '%2'").arg(QString::fromStdString(*name)).arg(QString::fromStdString(targetPath));
+				errorMessage = QApplication::tr("Failed to copy '%1' to '%2'")
+				       .arg(sourcePath)
+				       .arg(targetPath);
 				return false;
 			}
+			
+			stream << "input = \"mesh/" << *name << ".h3\"\n";
 		}
 		stream << "\n";
-		
 		
 		stream << "[mesh.outer]\n"
 		          "value = " << root->get_qualified_as<int>("mesh.outer.value").value_or(0) << "\n";
 		
 		if(auto name = root->get_qualified_as<std::string>("mesh.outer.input"))
 		{
-			stream << "input = " << *name << "\n";
-			
 			// Copy content of input file into poglar directory 
-			std::ifstream sourceFile(*name, std::ios::binary);
+			QString sourcePath = path_.filePath(QString::fromStdString(*name + ".h3"));
+			std::ifstream sourceFile(sourcePath.toStdString(), std::ios::binary);
 			if(!sourceFile.is_open())
 			{
-				errorMessage = QApplication::tr("Failed to open '%1'").arg(QString::fromStdString(*name));
+				errorMessage = QApplication::tr("Failed to open '%1'")
+				       .arg(sourcePath);
 				return false;
 			}
 			
-			std::string   targetPath = destination.filePath(QString::fromStdString("mesh/" + *name)).toStdString();
-			std::ofstream targetFile(targetPath, std::ios::binary);
+			QString targetPath = destination.filePath(QString::fromStdString("mesh/" + *name + ".h3"));
+			std::ofstream targetFile(targetPath.toStdString(), std::ios::binary);
 			if(!targetFile.is_open())
 			{
-				errorMessage = QApplication::tr("Failed to open '%1'").arg(QString::fromStdString(targetPath));
+				errorMessage = QApplication::tr("Failed to open '%1'")
+				       .arg(targetPath);
 				return false;
 			}
 			
 			targetFile << sourceFile.rdbuf();
 			if(targetFile.fail())
 			{
-				errorMessage = QApplication::tr("Failed to copy '%1' to '%2'").arg(QString::fromStdString(*name)).arg(QString::fromStdString(targetPath));
+				errorMessage = QApplication::tr("Failed to copy '%1' to '%2'")
+				       .arg(sourcePath)
+				       .arg(targetPath);
 				return false;
 			}
+			
+			stream << "input = \"mesh/" << *name << ".h3\"\n";
 		}
 		stream << "\n";
 		
@@ -131,20 +164,51 @@ namespace poglar
 		          "scaling = " << root->get_qualified_as<double>("load.scaling").value_or(0.0) << "\n"
 		          "\n";
 		
-		if(std::shared_ptr<cpptoml::table_array> history = root->get_table_array_qualified("load.history"))
+		std::vector<HistoryEntry> history;
+		if(std::shared_ptr<cpptoml::table_array> history_array = root->get_table_array_qualified("load.history"))
 		{
-			for(std::shared_ptr<cpptoml::table> entry: *history)
+			for(std::shared_ptr<cpptoml::table> entry: *history_array)
 			{
-				double                   time     = *entry->get_as<double>("time");
-				std::vector<std::string> datasets = *entry->get_array_of<std::string>("datasets");
+				history.emplace_back(RescaleTime(*entry->get_as<double>("time")),
+				                     *entry->get_array_of<std::string>("filename"));
+			}
+			std::sort(history.begin(), history.end(), SortByTime);
+			
+			
+			for(uint i = 0; i < history.size(); ++i)
+			{
+				const HistoryEntry &entry = history[i];
 				
-				// TODO: What now?
+				H3Map<double> load;
+				for(const std::string &filename: entry.datasets)
+				{
+					QString sourcePath = path_.filePath(QString::fromStdString(filename + ".h3"));
+					H3Map<double> layer;
+					layer.read(sourcePath.toStdString());
+					
+					load.add(layer);
+				}
+				load.scale(9.80655 / 3.1392202754452325e7);
+				
+				H3Map<vec3d> vload = SphericalTopography(load.resolution());
+				vload.scale(load);
+				
+				QString filename = QString("load/%1.h3").arg(i, 5, 10, QChar('0'));
+				QString targetPath = destination.filePath(filename);
+				vload.write(targetPath.toStdString());
+				
+				stream << "[[load.history]]\n"
+				          "time = " << entry.time << "\n"
+				          "filename = \"" << filename.toStdString() << "\"\n"
+				          "\n";
 			}
 		}
 		
 		
 		/* setting up the time section */
 		stream << "[time]\n"
+		          "start = " << (history.size() > 0 ? history.front().time : 0) << "\n"
+		          "end = "   << (history.size() > 0 ? history.back().time  : 0) << "\n"
 		          "steps = " << root->get_qualified_as<int>("time.steps").value_or(10) << "\n"
 		          "\n";
 		

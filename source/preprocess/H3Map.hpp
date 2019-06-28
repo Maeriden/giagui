@@ -25,6 +25,13 @@ namespace poglar {
 
 
   template <class Type>
+  class H3Map;
+
+
+  H3Map<vec3d> SphericalTopography(const int resolution);
+
+
+  template <class Type>
   class H3Map {
   public:
     H3Map();
@@ -49,6 +56,7 @@ namespace poglar {
     std::map<H3Index, Type> values_;
 
     template <class> friend class H3Map;
+    friend H3Map<vec3d> SphericalTopography(const int);
   };
 
 

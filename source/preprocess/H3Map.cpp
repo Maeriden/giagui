@@ -1,5 +1,6 @@
 #include "preprocess/H3Map.hpp"
 #include <cassert>
+#include <cmath>
 #include <vector>
 #include <cpptoml.h>
 
@@ -142,7 +143,7 @@ namespace poglar {
     std::ofstream ofile(filename);
     ofile << "[h3]\r\n"
              "resolution = " << resolution() << "\r\n"
-             "type = " << type_writer<Type>::get() << "\r\n"
+             "type = \"" << type_writer<Type>::get() << "\"\r\n"
              "default = " << value_writer<Type>::get(default_) << "\r\n"
              "\r\n"
              "[h3.values]\r\n";
@@ -286,6 +287,40 @@ namespace poglar {
     for (const auto &kv: new_values)
       if (kv.second != default_)
         values_.emplace(kv);
+  }
+
+
+  H3Map<vec3d>
+  SphericalTopography(const int resolution)
+  {
+    H3Map<vec3d> result;
+
+    result.resolution_ = resolution;
+
+    std::vector<H3Index> index0(res0IndexCount()),
+                         children;
+    GeoCoord center;
+
+    getRes0Indexes(index0.data());
+    for (const H3Index i0: index0) {
+      children.resize(maxH3ToChildrenSize(i0, resolution));
+      std::fill(children.begin(), children.end(), 0);
+      h3ToChildren(i0, resolution, children.data());
+
+      for (const H3Index i: children)
+        if (i != 0) {
+          h3ToGeo(i, &center);
+
+          vec3d normal{
+            -std::cos(center.lat) * std::cos(center.lon),
+            -std::cos(center.lat) * std::sin(center.lon),
+            -std::sin(center.lat)
+          };
+          result.values_[i] = normal;
+        }
+    }
+
+    return result;
   }
 
 
