@@ -1209,33 +1209,39 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 	};
 	
 	
+	config->mesh.inner.value.reset();
 	if(root->contains_qualified("mesh.inner.value"))
 	{
 		config->mesh.inner.value = *root->get_qualified_as<int>("mesh.inner.value");
 	}
 	
 	
+	config->mesh.inner.input = nullptr;
 	if(root->contains_qualified("mesh.inner.input"))
 	{
 		std::string datasetName = *root->get_qualified_as<std::string>("mesh.inner.input");
 		auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
 		// TODO: Show warning of nonexistent file reference?
-		config->mesh.inner.input = iter != datasets.end() ? *iter : nullptr;
+		if(iter != datasets.end())
+			config->mesh.inner.input = *iter;
 	}
 	
 	
+	config->mesh.outer.value.reset();
 	if(root->contains_qualified("mesh.outer.value"))
 	{
 		config->mesh.outer.value = *root->get_qualified_as<int>("mesh.outer.value");
 	}
 	
 	
+	config->mesh.outer.input = nullptr;
 	if(root->contains_qualified("mesh.outer.input"))
 	{
 		std::string datasetName = *root->get_qualified_as<std::string>("mesh.outer.input");
 		auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(datasetName));
 		// TODO: Show warning of nonexistent file reference?
-		config->mesh.outer.input = iter != datasets.end() ? *iter : nullptr;
+		if(iter != datasets.end())
+			config->mesh.outer.input = *iter;
 	}
 	
 	config->time.steps = root->get_qualified_as<int>("time.steps").value_or(1);
@@ -1253,8 +1259,13 @@ bool MapWindow::deserializeSimulationConfig(const QString& path, SimulationConfi
 			config->load.history.push_back({});
 			config->load.history.back().time = table->get_as<double>("time").value_or(0.0);
 			
-			HashSet<Dataset*> entryDatasets;
-			for(const std::string& entryDatasetName : *table->get_array_of<std::string>("filename"))
+			std::vector<std::string> array = *table->get_array_of<std::string>("filename");
+			// NOTE: Putting *table->get_array_of() inside the for statement causes a weird error where the loop
+			// variable is initialized incorrectly
+			// I THINK what happens is: get_array_of() returns a cpptoml::option that owns the vector, then the
+			// operator*() returns a reference to the vector, then the option goes out of scope cleaning up the memory
+			// and we are left with a reference to a destroyed vector upon which we iterate
+			for(const std::string& entryDatasetName : array)
 			{
 				auto iter = std::find_if(datasets.begin(), datasets.end(), MatchByName(entryDatasetName));
 				// TODO: Show warning of nonexistent file reference?
@@ -1394,7 +1405,7 @@ bool MapWindow::deserializeDataset(const QString& path, Dataset* dataset)
 	
 	dataset->id          = root->get_qualified_as<std::string>("giagui.name").value_or(QFileInfo(path).baseName().toStdString());
 	dataset->resolution  = root->get_qualified_as<int>("h3.resolution").value_or(0);
-	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("").back() == 'i';
+	dataset->isInteger   = root->get_qualified_as<std::string>("h3.type").value_or("1f").back() == 'i';
 	dataset->density     = root->get_qualified_as<double>("h3.density").value_or(Dataset::NO_DENSITY);
 	dataset->measureUnit = ""; // TODO: This is not really useful. Remove it?
 	dataset->minValue    = {0};
