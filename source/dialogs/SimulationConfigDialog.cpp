@@ -1,8 +1,7 @@
-#include <utility>
-
-#include <utility>
-
 #include "SimulationConfigDialog.hpp"
+
+#include <cassert>
+#include <utility>
 
 #include <QKeyEvent>
 #include <QValidator>

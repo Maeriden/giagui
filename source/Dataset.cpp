@@ -1,5 +1,6 @@
 #include "Dataset.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <utility>
 #include "MapUtils.hpp"

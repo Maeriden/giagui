@@ -1,5 +1,7 @@
 #include "DatasetListWidget.hpp"
 
+#include <cassert>
+
 #include <QKeyEvent>
 #include <QListWidget>
 #include <QBoxLayout>
@@ -13,7 +15,7 @@
 
 #include "Dataset.hpp"
 #include "models/DatasetListModel.hpp"
-#include <dialogs/DatasetCreateDialog.hpp>
+#include "dialogs/DatasetCreateDialog.hpp"
 
 
 DatasetListWidget::DatasetListWidget(DatasetListModel* datasets, QWidget* parent) : QWidget(parent)

@@ -2,6 +2,7 @@
 #define GIAGUI_MAPUTILS_HPP
 
 
+#include <cassert>
 #include <cmath>
 #include <QRectF>
 #include <QSizeF>

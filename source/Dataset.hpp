@@ -1,6 +1,7 @@
 #ifndef GIAGUI_MAP_H
 #define GIAGUI_MAP_H
 
+#include <cassert>
 #include <cmath>
 #include <QMetaType>
 #include <h3/h3api.h>

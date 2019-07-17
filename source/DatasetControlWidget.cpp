@@ -1,5 +1,7 @@
 #include "DatasetControlWidget.hpp"
 
+#include <cassert>
+
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>

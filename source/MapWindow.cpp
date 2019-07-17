@@ -1,5 +1,7 @@
 #include "MapWindow.hpp"
 
+#include <cassert>
+
 #include <QApplication>
 #include <QKeyEvent>
 #include <QMenuBar>

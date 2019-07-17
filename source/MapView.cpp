@@ -1,5 +1,6 @@
 #include "MapView.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <QKeyEvent>
 #include <QCloseEvent>

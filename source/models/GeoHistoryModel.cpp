@@ -1,5 +1,7 @@
 #include "GeoHistoryModel.hpp"
 
+#include <cassert>
+
 
 GeoHistoryModel::GeoHistoryModel(QObject* parent) : QAbstractTableModel(parent)
 {
