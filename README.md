@@ -22,8 +22,24 @@ cd gia-gui
 git checkout v2
 git submodule init
 git submodule update
-mkdir build
-cd build
+
+# Compile and install cpptoml. Skip if already installed
+pushd 3rdparty/cpptoml
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+popd
+
+# Compile and install h3. Skip if already installed
+pushd 3rdparty/h3
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+popd
+
+mkdir build && cd build
 cmake ..
 make
 ```
