@@ -19,7 +19,6 @@ h3      >= 3.4.0 (included in this repo as a submodule)
 ```
 git clone https://gitlab.com/alecel/gia-gui.git
 cd gia-gui
-git checkout v2
 git submodule init
 git submodule update
 
