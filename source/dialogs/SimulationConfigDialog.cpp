@@ -72,7 +72,8 @@ struct MeshInputProxyModel : public QAbstractListModel
 				return QString::fromStdString(dataset->id);
 			}
 		}
-		
+
+		// UserRole is used to get the actual dataset instead of its name
 		if(role == Qt::UserRole)
 		{
 			if(index.row() > 0)
@@ -80,7 +81,7 @@ struct MeshInputProxyModel : public QAbstractListModel
 				Dataset* dataset = *std::next(items.begin(), index.row() - 1);
 				return QVariant::fromValue(dataset);
 			}
-			return QVariant::fromValue(nullptr);
+			return QVariant::fromValue((Dataset*)nullptr);
 		}
 		
 		return QVariant();
@@ -344,7 +345,6 @@ SimulationConfigDialog::SimulationConfigDialog(DatasetListModel* datasetsModel, 
 		layout->addWidget(outerValueEdit, 20);
 		
 		outerInputComboBox = new QComboBox(groupBox);
-		outerInputComboBox->addItem(QString(), QVariant::fromValue(nullptr));
 		outerInputComboBox->setModel(new MeshInputProxyModel(datasetsModel, this));
 		layout->addWidget(outerInputComboBox, 80);
 
