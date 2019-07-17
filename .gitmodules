@@ -1,0 +1,6 @@
+[submodule "3rdparty/cpptoml"]
+	path = 3rdparty/cpptoml
+	url = https://github.com/skystrife/cpptoml
+[submodule "3rdparty/h3"]
+	path = 3rdparty/h3
+	url = https://github.com/uber/h3
