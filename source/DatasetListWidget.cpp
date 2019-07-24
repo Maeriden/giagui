@@ -30,7 +30,7 @@ DatasetListWidget::DatasetListWidget(DatasetListModel* datasets, QWidget* parent
 	{
 		QHBoxLayout* headerLayout = new QHBoxLayout();
 		headerLayout->setSpacing(2);
-		headerLayout->setMargin(0);
+//		headerLayout->setMargin(0);
 		
 		layout->addLayout(headerLayout, 0);
 		layout->setStretchFactor(headerLayout, 0);
